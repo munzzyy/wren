@@ -20,6 +20,7 @@ import io.github.munzzyy.wren.devicecheck.DeviceCheckActivity
 import io.github.munzzyy.wren.duress.DuressPassphraseDialogFragment
 import io.github.munzzyy.wren.duress.FailedAttemptPolicy
 import io.github.munzzyy.wren.duress.PanicAction
+import io.github.munzzyy.wren.guard.Reauth
 import org.signal.core.ui.util.ThemeUtil
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.ChangePassphraseDialogFragment
@@ -216,7 +217,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         isChecked = state.passphraseLock && state.duressPassphrase,
         isEnabled = state.passphraseLock,
         onToggle = { isChecked ->
-          showDuressPassphraseDialog(if (isChecked) DuressPassphraseDialogFragment.MODE_SET else DuressPassphraseDialogFragment.MODE_CLEAR)
+          Reauth.require(this@PrivacySettingsFragment) {
+            showDuressPassphraseDialog(if (isChecked) DuressPassphraseDialogFragment.MODE_SET else DuressPassphraseDialogFragment.MODE_CLEAR)
+          }
           false
         }
       )
@@ -225,7 +228,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         title = DSLSettingsText.from(R.string.PrivacySettingsFragment__change_duress_passphrase),
         isEnabled = state.passphraseLock && state.duressPassphrase,
         onClick = {
-          showDuressPassphraseDialog(DuressPassphraseDialogFragment.MODE_SET)
+          Reauth.require(this@PrivacySettingsFragment) {
+            showDuressPassphraseDialog(DuressPassphraseDialogFragment.MODE_SET)
+          }
         }
       )
 
@@ -236,7 +241,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         isEnabled = state.passphraseLock,
         confirmAction = true,
         onSelected = {
-          FailedAttemptPolicy.ALLOWED_LIMITS.getOrNull(it)?.let { limit -> viewModel.setFailedAttemptLimit(limit) }
+          FailedAttemptPolicy.ALLOWED_LIMITS.getOrNull(it)?.takeIf { limit -> limit != state.failedAttemptLimit }?.let { limit ->
+            Reauth.require(this@PrivacySettingsFragment) { viewModel.setFailedAttemptLimit(limit) }
+          }
         }
       )
 
@@ -255,7 +262,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         isEnabled = state.panicTriggerPackage != null,
         confirmAction = true,
         onSelected = {
-          panicActions.getOrNull(it)?.let { action -> viewModel.setPanicAction(action) }
+          panicActions.getOrNull(it)?.takeIf { action -> action != state.panicAction }?.let { action ->
+            Reauth.require(this@PrivacySettingsFragment) { viewModel.setPanicAction(action) }
+          }
         }
       )
 
@@ -456,7 +465,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
     MaterialAlertDialogBuilder(requireContext())
       .setTitle(getString(R.string.PrivacySettingsFragment__disconnect_s, getTriggerAppName(packageName)))
       .setMessage(R.string.PrivacySettingsFragment__disconnect_trigger_message)
-      .setPositiveButton(R.string.PrivacySettingsFragment__disconnect) { _, _ -> viewModel.disconnectPanicTrigger() }
+      .setPositiveButton(R.string.PrivacySettingsFragment__disconnect) { _, _ ->
+        Reauth.require(this) { viewModel.disconnectPanicTrigger() }
+      }
       .setNegativeButton(android.R.string.cancel, null)
       .show()
   }
