@@ -57,16 +57,58 @@ documented in [docs/EXPORT.md](docs/EXPORT.md), and
 Route through Orbot from the device check, when Orbot is installed, using
 Molly's own proxy code that refuses to connect any other way.
 
+## Why Wren instead of Signal or Molly
+
+Signal is the best mainstream messenger and Wren keeps all of it: the same
+protocol, servers, groups, calls and contacts. What Signal will not do is
+protect you from the person holding your unlocked phone, and that is the
+threat most people who need a hardened client actually face. Molly fixed the
+first half of that in 2018 with a passphrase that encrypts the database at
+rest, and Wren starts from Molly for that reason.
+
+What Molly still does not do, and Wren does:
+
+- Erase under pressure. A duress passphrase, a limit on wrong unlocks, a panic
+  button that can erase, and an opt-in timer that erases if nobody unlocks the
+  phone for days. Molly's own tracker has asked for the first of these since
+  issue #487 and it is still open there.
+- Get your messages out. Export one chat or all of them as HTML, text, JSON
+  or one encrypted file. Signal can only dump everything as JSON behind a
+  flag; Molly cannot export a chat at all.
+- Show you where you stand. One screen reads the phone's security patch
+  date, screen lock and every privacy setting, warns when something is weak,
+  and fixes what Wren controls with one tap.
+- Ask before anything risky. The passphrase is required again before an
+  export, before the lock is turned off, and before a panic trigger app gets
+  control, and the trigger app has to be confirmed by name and signing key.
+- Ship without Google. Molly's unified build has carried Firebase in every
+  APK since December; Wren links it only on request and a script proves any
+  APK clean.
+- Say what it does not do. The threat model, the audit guide and the panic
+  guide name the residual risks, the files to read and the tests to run.
+
+And Wren has a desktop app, which Molly does not:
+[munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop) gives Signal
+Desktop the app lock Signal refused, plus duress, a fail-closed proxy and Tor
+setting, and chat export.
+
+One honest limit: Wren is on Signal 8.20.5 while Signal ships 8.29.4, for the
+reason under "Keeping up with Signal".
+
 ## Status
 
-Wren is new. There is no release yet and no signing certificate to verify
-against. The code builds, the unit tests pass, and the features above are
-implemented, but they have not been through a round of real-phone testing by
-people other than me. Treat the first release as a beta and keep a backup.
+Wren is new. The first release is 8.20.5-1, on the
+[Releases](https://github.com/munzzyy/wren/releases) page with SHA-256 sums.
+The code builds, 2842 unit tests pass in CI, and every feature above is in,
+but none of it has been through a round of real-phone testing by people other
+than me. Treat it as a beta and keep a backup.
 
-The first build to download will land on the
-[Releases](https://github.com/munzzyy/wren/releases) page, with SHA-256
-sums and the signing fingerprint written here the same day.
+Releases are signed with this certificate. Check an APK with
+`apksigner verify --print-certs`:
+
+```
+SHA-256: b66420073b986655a97cb35b166fa5a06abd5119545b9e0b21b087d0f71a7d66
+```
 
 ## How Wren compares
 
@@ -115,8 +157,6 @@ iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   account exists.
 
 ## Install
-
-Nothing to install yet. When the first release is out:
 
 - Download the APK from [Releases](https://github.com/munzzyy/wren/releases)
   and check the SHA-256 sum. Each release carries one file per CPU type
