@@ -15,13 +15,16 @@ env:
   MOLLY_URL: https://github.com/mollyim/mollyim-android.git
   SIGNAL_URL: https://github.com/signalapp/Signal-Android.git
   GIT_LFS_SKIP_SMUDGE: 1
+  # Mirroring molly-main and upstream-stable pushes refs that carry workflow
+  # files, which GITHUB_TOKEN may not do; those two steps need a PAT.
+  HAVE_SYNC_PAT: ${{ secrets.SYNC_PAT != '' }}
 
 jobs:
   sync:
     name: Sync branches
     runs-on: ubuntu-24.04
     permissions:
-      contents: write # to push molly-main and upstream-stable when SYNC_PAT is not set
+      contents: write # to commit the README status line
     outputs:
       molly_sha: ${{ steps.range.outputs.molly_sha }}
       pending: ${{ steps.range.outputs.pending }}
@@ -46,23 +49,31 @@ jobs:
           fi
           echo "STABLE_TAG=v$version" >> "$GITHUB_ENV"
 
+      - name: Fetch the stable tag
+        run: |
+          if ! git fetch --no-tags signal "refs/tags/${STABLE_TAG}:refs/tags/${STABLE_TAG}"; then
+            echo "::notice::tag ${STABLE_TAG} is not on signal yet"
+          fi
+
       - name: Update molly-main
+        if: "env.HAVE_SYNC_PAT == 'true'"
         run: |
           gh auth setup-git
           git push --force origin refs/remotes/molly/main:refs/heads/molly-main
         env:
-          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
 
       - name: Update upstream-stable
+        if: "env.HAVE_SYNC_PAT == 'true'"
         run: |
-          if ! git fetch --no-tags signal "refs/tags/${STABLE_TAG}:refs/tags/${STABLE_TAG}"; then
-            echo "::notice::tag ${STABLE_TAG} is not on signal yet, skipping"
+          if ! git rev-parse -q --verify "refs/tags/${STABLE_TAG}^{commit}" >/dev/null; then
+            echo "::notice::tag ${STABLE_TAG} is not fetched, skipping"
             exit 0
           fi
           gh auth setup-git
           git push --force origin "${STABLE_TAG}^{commit}:refs/heads/upstream-stable"
         env:
-          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
 
       - name: Work out the merge range
         id: range
@@ -120,7 +131,7 @@ jobs:
           gh auth setup-git
           git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }
         env:
-          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Share the issue text
         uses: actions/upload-artifact@v7
