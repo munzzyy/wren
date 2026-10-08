@@ -77,6 +77,10 @@ jobs:
             echo "pending=$count"
           } >> "$GITHUB_OUTPUT"
           {
+            echo "MOLLY_SIGNAL=${molly_signal:-unknown}"
+            echo "WREN_SIGNAL=${wren_signal:-unknown}"
+          } >> "$GITHUB_ENV"
+          {
             echo "Molly main is at \`${head::12}\`, built on Signal ${molly_signal:-unknown}."
             echo "Wren main is on Signal ${wren_signal:-unknown}. Signal stable is ${STABLE_TAG#v}."
             echo
@@ -98,6 +102,25 @@ jobs:
               echo 'To merge: run `tools/merge-molly.sh` on a clean checkout of main.'
             fi
           } | tee "$RUNNER_TEMP/issue-body.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rewrite the Signal status line in the README
+        run: |
+          tagdate=unknown
+          if git rev-parse -q --verify "refs/tags/${STABLE_TAG}^{commit}" >/dev/null; then
+            tagdate=$(git log -1 --format=%cs "${STABLE_TAG}^{commit}")
+          fi
+          tools/signal-status.sh "$WREN_SIGNAL" "${STABLE_TAG#v}" "$tagdate" "$MOLLY_SIGNAL"
+          if git diff --quiet README.md; then
+            echo "status line unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update the Signal status line" README.md
+          gh auth setup-git
+          git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Share the issue text
         uses: actions/upload-artifact@v7

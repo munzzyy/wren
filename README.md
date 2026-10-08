@@ -1,6 +1,8 @@
 # Wren
 
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
+[![Test](https://github.com/munzzyy/wren/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/munzzyy/wren/actions/workflows/test.yml)
+[![Reproducible Build](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml/badge.svg)](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml)
 
 <img src="docs/images/icon.png" alt="Wren icon" width="96" align="right">
 
@@ -98,8 +100,8 @@ And Wren has a desktop app, which Molly does not:
 Desktop an app lock, duress, a proxy and Tor setting that keeps the app
 offline when the proxy is down, and one-chat export.
 
-One honest limit: Wren is on Signal 8.20.5 while Signal ships 8.29.4, for the
-reason under "Keeping up with Signal".
+One honest limit: Wren is behind Signal's current release. The status line
+under "Status" says by how much, and "Keeping up with Signal" says why.
 
 ## Status
 
@@ -111,6 +113,10 @@ every APK identical
 The code builds, 2842 unit tests pass in CI, and every feature above is in,
 but none of it has been through a round of real-phone testing by people other
 than me. Treat it as a beta and keep a backup.
+
+<!-- signal-status -->
+Wren is on Signal 8.20.5. Signal's stable release is 8.29.3 (tagged 2026-09-30). Molly's main branch is on Signal 8.19.2. The [daily sync workflow](https://github.com/munzzyy/wren/actions/workflows/sync-upstream.yml) rewrites this line whenever one of those changes.
+<!-- /signal-status -->
 
 Releases are signed with this certificate. Check an APK with
 `apksigner verify --print-certs`:
@@ -247,8 +253,8 @@ are at that moment. Details in [docs/EXPORT.md](docs/EXPORT.md).
   the list; `tools/apk-report.sh` flags them until then.
 - The black theme, the device check and both wipes have unit tests and a
   clean build behind them but have not been looked at on a real phone yet.
-- Wren is on Signal 8.20.5 while Signal ships 8.29.4, for the reason given
-  under "Keeping up with Signal".
+- Wren is behind Signal's current release; the status line under "Status" has
+  the numbers and "Keeping up with Signal" has the reason.
 
 ## Keeping up with Signal
 
@@ -258,7 +264,8 @@ falls behind dies, so the native library rebuild in
 [docs/NATIVE.md](docs/NATIVE.md) has a deadline, not just a wish. Wren started from Molly, which was on Signal 8.19.2; I
 merged Signal 8.20.5 on top myself (every conflict and decision is in
 [docs/SIGNAL-MERGE-LOG.md](docs/SIGNAL-MERGE-LOG.md)), so Wren is one step
-ahead of Molly while Signal ships 8.29.4.
+ahead of Molly, and the status line under "Status" says how far Signal has
+moved since.
 
 The rest of the gap has one cause, and it is the same one that holds Molly
 back: Signal 8.21 and later need newer builds of two native libraries,
@@ -272,9 +279,9 @@ it is written here so you can see it.
 [docs/NATIVE.md](docs/NATIVE.md) is the recipe for rebuilding those two
 libraries from Molly's patches.
 
-A daily workflow fetches both upstreams and opens an issue within a day of
-Molly moving, with the exact commit range and the version gap, so the lag is always
-public. `tools/merge-molly.sh` does a Molly merge and reruns the rebrand.
+A daily workflow fetches both upstreams, rewrites the status line under
+"Status", and opens an issue within a day of Molly moving, with the exact
+commit range and the version gap, so the lag is always public. `tools/merge-molly.sh` does a Molly merge and reruns the rebrand.
 
 ## Build it yourself
 
