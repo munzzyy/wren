@@ -63,10 +63,10 @@ with the same key and carrying the same version code. Sizes are for the
 
 | File | For | Size |
 |------|-----|------|
-| `Wren-<version>-arm64-v8a.apk` | nearly every phone and tablet from the last decade, Pixels, GrapheneOS | 85 MB |
-| `Wren-<version>-armeabi-v7a.apk` | old 32-bit ARM devices | 76 MB |
-| `Wren-<version>-x86_64.apk` | Chromebooks, Android-x86, the emulator | 90 MB |
-| `Wren-<version>.apk` | all three in one file, if you do not know or want a single file for a repository | 130 MB |
+| `Wren-<version>-arm64-v8a.apk` | nearly every phone and tablet from the last decade, Pixels, GrapheneOS | 82 MB |
+| `Wren-<version>-armeabi-v7a.apk` | old 32-bit ARM devices | 73 MB |
+| `Wren-<version>-x86_64.apk` | Chromebooks, Android-x86, the emulator | 86 MB |
+| `Wren-<version>.apk` | all three in one file, if you do not know or want a single file for a repository | 124 MB |
 
 If you are unsure which CPU you have, a device info app will tell you. In
 Obtainium, put `arm64-v8a` in the APK filter regex so it keeps picking the
