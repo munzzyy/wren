@@ -343,14 +343,16 @@ public class PassphrasePromptActivity extends PassphraseActivity {
       progressTimer.start();
 
       MasterSecret masterSecret = null;
-      try {
-        masterSecret = MasterSecretUtil.getMasterSecret(getApplicationContext(), passphrase);
-        DuressManager.onUnlocked(getApplicationContext());
-      } catch (InvalidPassphraseException e) {
-        Log.d(TAG, e);
-        DuressManager.onWrongPassphrase(getApplicationContext(), passphrase);
-      } catch (UnrecoverableKeyException e) {
-        Log.d(TAG, e);
+      if (DuressManager.onAttemptStarting(getApplicationContext())) {
+        try {
+          masterSecret = MasterSecretUtil.getMasterSecret(getApplicationContext(), passphrase);
+          DuressManager.onUnlocked(getApplicationContext());
+        } catch (InvalidPassphraseException e) {
+          Log.d(TAG, e);
+          DuressManager.onWrongPassphrase(getApplicationContext(), passphrase);
+        } catch (UnrecoverableKeyException e) {
+          Log.d(TAG, e);
+        }
       }
 
       Arrays.fill(passphrase, (char) 0);

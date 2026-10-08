@@ -38,11 +38,9 @@ object UsbLock {
       val newReceiver = Receiver()
       ContextCompat.registerReceiver(app, newReceiver, IntentFilter(ACTION_USB_STATE), ContextCompat.RECEIVER_NOT_EXPORTED)
       receiver = newReceiver
-      Log.i(TAG, "USB lock armed")
     } else if (!enabled && current != null) {
       runCatching { app.unregisterReceiver(current) }
       receiver = null
-      Log.i(TAG, "USB lock disarmed")
     }
   }
 
@@ -50,13 +48,10 @@ object UsbLock {
     if (!TextSecurePreferences.isPassphraseLockEnabled(context) || KeyCachingService.isLocked()) {
       return
     }
-    Log.w(TAG, "USB data connection, locking")
-    try {
+    runCatching {
       val lockIntent = Intent(context, KeyCachingService::class.java)
       lockIntent.action = KeyCachingService.CLEAR_KEY_ACTION
       context.startService(lockIntent)
-    } catch (e: RuntimeException) {
-      Log.w(TAG, "Could not lock", e)
     }
   }
 

@@ -20,6 +20,7 @@ import io.github.munzzyy.wren.devicecheck.DeviceCheckActivity
 import io.github.munzzyy.wren.duress.DuressPassphraseDialogFragment
 import io.github.munzzyy.wren.duress.FailedAttemptPolicy
 import io.github.munzzyy.wren.duress.PanicAction
+import io.github.munzzyy.wren.duress.SigningCertificates
 import io.github.munzzyy.wren.guard.InactivityWipePolicy
 import io.github.munzzyy.wren.guard.Reauth
 import org.signal.core.ui.util.ThemeUtil
@@ -317,7 +318,7 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
 
       clickPref(
         title = DSLSettingsText.from(R.string.PrivacySettingsFragment__connected_trigger_app),
-        summary = DSLSettingsText.from(getTriggerAppSummary(state.panicTriggerPackage)),
+        summary = DSLSettingsText.from(getTriggerAppSummary(state.panicTriggerPackage, state.panicTriggerCertificate)),
         onClick = {
           onTriggerAppClicked(state.panicTriggerPackage)
         }
@@ -491,11 +492,11 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
     return if (label.isNullOrBlank() || label == packageName) packageName else "$label ($packageName)"
   }
 
-  private fun getTriggerAppSummary(packageName: String?): String {
-    return if (packageName == null) {
+  private fun getTriggerAppSummary(packageName: String?, certificate: String?): String {
+    return if (packageName == null || certificate == null) {
       getString(R.string.PrivacySettingsFragment__no_trigger_app_connected)
     } else {
-      getString(R.string.PrivacySettingsFragment__trigger_app_connected, getTriggerAppName(packageName))
+      getString(R.string.PrivacySettingsFragment__trigger_app_connected_signed_s, getTriggerAppName(packageName), SigningCertificates.format(certificate))
     }
   }
 

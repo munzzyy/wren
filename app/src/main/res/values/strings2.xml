@@ -125,7 +125,7 @@
     <string name="PrivacySettingsFragment__panic_action_summary">What Wren does when a panic trigger app fires. Erase all data deletes everything Wren keeps on this phone at once, with no undo, and only works for the connected trigger app. Any other app can only lock Wren.</string>
     <string name="PrivacySettingsFragment__connected_trigger_app">Connected trigger app</string>
     <string name="PrivacySettingsFragment__no_trigger_app_connected">None. To connect one, open a PanicKit trigger app such as Ripple and turn Wren on there.</string>
-    <string name="PrivacySettingsFragment__trigger_app_connected">%1$s. Tap to disconnect.</string>
+    <string name="PrivacySettingsFragment__trigger_app_connected_signed_s">%1$s, signing certificate SHA-256:\n%2$s\nTap to disconnect.</string>
     <string name="PrivacySettingsFragment__disconnect_s">Disconnect %1$s?</string>
     <string name="PrivacySettingsFragment__disconnect_trigger_message">It will no longer be able to trigger Wren, and the panic action goes back to Lock app.</string>
     <string name="PrivacySettingsFragment__disconnect">Disconnect</string>
@@ -151,7 +151,7 @@
     <string name="ReauthDialogFragment__checking_passphrase">Checking passphrase…</string>
     <string name="ReauthDialogFragment__could_not_check_your_passphrase">Couldn\'t check your passphrase. Try again.</string>
     <string name="PanicConnectActivity__let_this_app_trigger_wrens_panic_action">Let this app trigger Wren\'s panic action?</string>
-    <string name="PanicConnectActivity__s_s_wants_to_connect">%1$s (%2$s) wants to be Wren\'s panic trigger. It will be able to lock Wren at any time. Erasing stays off until you choose it in Wren\'s privacy settings.</string>
+    <string name="PanicConnectActivity__s_s_wants_to_connect_signed_s">%1$s (%2$s) wants to be Wren\'s panic trigger. It will be able to lock Wren at any time. Erasing stays off until you choose it in Wren\'s privacy settings.\n\nSigning certificate SHA-256:\n%3$s\n\nIf the app is ever reinstalled with a different key, Wren disconnects it.</string>
     <string name="PanicConnectActivity__allow">Allow</string>
     <string name="PanicConnectActivity__deny">Deny</string>
     <string name="DeviceCheck__route_through_orbot">Route through Orbot</string>

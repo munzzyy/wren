@@ -37,16 +37,17 @@ class PanicConnectActivity : AppCompatActivity() {
     setResult(RESULT_CANCELED)
 
     val pending = intent.getStringExtra(EXTRA_PACKAGE)
-    if (pending.isNullOrEmpty()) {
+    val digest = pending?.takeIf { it.isNotEmpty() }?.let { SigningCertificates.sha256(packageManager, it) }
+    if (pending.isNullOrEmpty() || digest == null) {
       finish()
       return
     }
 
     val shown = MaterialAlertDialogBuilder(this)
       .setTitle(R.string.PanicConnectActivity__let_this_app_trigger_wrens_panic_action)
-      .setMessage(getString(R.string.PanicConnectActivity__s_s_wants_to_connect, appLabel(pending), pending))
-      .setPositiveButton(R.string.PanicConnectActivity__allow) { _, _ -> answer(pending, allowed = true) }
-      .setNegativeButton(R.string.PanicConnectActivity__deny) { _, _ -> answer(pending, allowed = false) }
+      .setMessage(getString(R.string.PanicConnectActivity__s_s_wants_to_connect_signed_s, appLabel(pending), pending, SigningCertificates.format(digest)))
+      .setPositiveButton(R.string.PanicConnectActivity__allow) { _, _ -> answer(pending, digest, allowed = true) }
+      .setNegativeButton(R.string.PanicConnectActivity__deny) { _, _ -> answer(pending, digest, allowed = false) }
       .setOnDismissListener { finish() }
       .show()
 
@@ -62,7 +63,7 @@ class PanicConnectActivity : AppCompatActivity() {
     super.onDestroy()
   }
 
-  private fun answer(pending: String, allowed: Boolean) {
+  private fun answer(pending: String, shownDigest: String, allowed: Boolean) {
     if (answered) {
       return
     }
@@ -70,17 +71,14 @@ class PanicConnectActivity : AppCompatActivity() {
 
     val result = try {
       val store = DuressStore(this)
-      when (PanicDecision.confirm(store.panicTriggerPackage, pending, packageName, allowed)) {
+      val currentDigest = SigningCertificates.sha256(packageManager, pending)
+      when (PanicDecision.confirm(store.panicTriggerPackage, pending, shownDigest, currentDigest, packageName, allowed)) {
         PanicConfirmResult.CONNECT -> {
-          store.connectPanicTrigger(pending)
-          Log.i(TAG, "Panic trigger connected")
+          store.connectPanicTrigger(pending, shownDigest)
           RESULT_OK
         }
         PanicConfirmResult.ALREADY_CONNECTED -> RESULT_OK
-        PanicConfirmResult.REFUSE -> {
-          Log.i(TAG, "Panic trigger connect refused")
-          RESULT_CANCELED
-        }
+        PanicConfirmResult.REFUSE -> RESULT_CANCELED
       }
     } catch (e: RuntimeException) {
       Log.w(TAG, "Could not store panic trigger", e)

@@ -43,10 +43,7 @@ object InactivityWipe {
 
       when (decision) {
         InactivityWipePolicy.Decision.Off -> cancel(app)
-        InactivityWipePolicy.Decision.Wipe -> {
-          Log.w(TAG, "No unlock within the limit")
-          AppWipe.wipeNow(app)
-        }
+        InactivityWipePolicy.Decision.Wipe -> AppWipe.wipeNow(app)
         is InactivityWipePolicy.Decision.Wait -> schedule(app, decision.checkAt)
         is InactivityWipePolicy.Decision.Restart -> {
           store.lastUnlockAt = decision.baseline

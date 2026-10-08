@@ -125,6 +125,7 @@ class PrivacySettingsViewModel(
       failedAttemptLimit = repository.failedAttemptLimit,
       panicAction = repository.panicAction,
       panicTriggerPackage = repository.panicTriggerPackage,
+      panicTriggerCertificate = repository.panicTriggerCertificate,
       inactivityWipeDays = repository.inactivityWipeDays,
       usbLock = repository.isUsbLockEnabled,
       biometricScreenLock = TextSecurePreferences.isBiometricScreenLockEnabled(application),

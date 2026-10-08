@@ -29,7 +29,8 @@ import org.thoughtcrime.securesms.util.WindowUtil
 import org.thoughtcrime.securesms.util.setIncognitoKeyboardEnabled
 
 /**
- * Asks for the passphrase again. A wrong passphrase goes through
+ * Asks for the passphrase again. Every attempt is counted by
+ * [DuressManager.onAttemptStarting] and a wrong one goes through
  * [DuressManager.onWrongPassphrase], so duress and the failed-attempt limit
  * apply here the same as on the lock screen.
  */
@@ -131,6 +132,10 @@ class ReauthDialogFragment : DialogFragment() {
   }
 
   private fun verify(context: Context, passphrase: CharArray): Result {
+    if (!DuressManager.onAttemptStarting(context)) {
+      return Result.FAILED
+    }
+
     return try {
       MasterSecretUtil.getMasterSecret(context, passphrase).close()
       DuressManager.onUnlocked(context)

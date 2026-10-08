@@ -5,7 +5,6 @@ package io.github.munzzyy.wren.duress
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.service.KeyCachingService
 import org.thoughtcrime.securesms.util.TextSecurePreferences
 
@@ -13,12 +12,12 @@ import org.thoughtcrime.securesms.util.TextSecurePreferences
  * PanicKit responder reached through startActivityForResult, which is the only
  * way to learn which app sent the trigger. Molly's broadcast receiver stays for
  * triggers that only broadcast; it can lock but never wipe.
+ *
+ * Nothing here is logged: the log outlives a wipe and would say what caused it.
  */
 class PanicResponderActivity : Activity() {
 
   companion object {
-    private val TAG = Log.tag(PanicResponderActivity::class.java)
-
     const val ACTION_TRIGGER = "info.guardianproject.panic.action.TRIGGER"
     const val ACTION_CONNECT = "info.guardianproject.panic.action.CONNECT"
     const val ACTION_DISCONNECT = "info.guardianproject.panic.action.DISCONNECT"
@@ -34,49 +33,54 @@ class PanicResponderActivity : Activity() {
         ACTION_TRIGGER -> handleTrigger()
       }
     } catch (e: RuntimeException) {
-      Log.w(TAG, "Panic request failed", e)
+      setResult(RESULT_CANCELED)
     }
 
     finish()
   }
 
+  private fun callerDigest(): String? = callingPackage?.let { SigningCertificates.sha256(packageManager, it) }
+
   private fun handleConnect() {
     val store = DuressStore(this)
     val caller = callingPackage
-    when (PanicDecision.connect(store.panicTriggerPackage, caller, packageName)) {
+    val outcome = PanicDecision.onConnect(store.panicTriggerPackage, store.panicTriggerCertificate, caller, callerDigest(), packageName)
+    if (outcome.disconnect) {
+      store.disconnectPanicTrigger()
+    }
+    when (outcome.result) {
       PanicConnectResult.ASK_USER -> {
-        Log.i(TAG, "Panic trigger connect needs confirmation")
         startActivity(PanicConnectActivity.createIntent(this, requireNotNull(caller)).addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT))
       }
       PanicConnectResult.ALREADY_CONNECTED -> setResult(RESULT_OK)
-      PanicConnectResult.REFUSE -> {
-        Log.w(TAG, "Panic trigger connect refused")
-        setResult(RESULT_CANCELED)
-      }
+      PanicConnectResult.REFUSE -> setResult(RESULT_CANCELED)
     }
   }
 
   private fun handleDisconnect() {
     val store = DuressStore(this)
-    if (PanicDecision.isConnectedCaller(store.panicTriggerPackage, callingPackage)) {
+    if (PanicDecision.shouldDisconnect(store.panicTriggerPackage, store.panicTriggerCertificate, callingPackage, callerDigest())) {
       store.disconnectPanicTrigger()
-      Log.i(TAG, "Panic trigger disconnected")
     }
     setResult(RESULT_OK)
   }
 
   private fun handleTrigger() {
     val store = DuressStore(this)
-    val response = PanicDecision.decide(
+    val outcome = PanicDecision.onTrigger(
       action = store.panicAction,
       connectedPackage = store.panicTriggerPackage,
+      connectedDigest = store.panicTriggerCertificate,
       callingPackage = callingPackage,
+      callingDigest = callerDigest(),
       passphraseLockEnabled = TextSecurePreferences.isPassphraseLockEnabled(this)
     )
 
-    Log.i(TAG, "Panic trigger: $response")
+    if (outcome.disconnect) {
+      store.disconnectPanicTrigger()
+    }
 
-    when (response) {
+    when (outcome.response) {
       PanicResponse.WIPE -> AppWipe.wipeInBackground(this)
       PanicResponse.LOCK -> lock()
       PanicResponse.NOTHING -> Unit
