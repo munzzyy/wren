@@ -13,14 +13,17 @@ Molly adds a passphrase lock for the database, a RAM wiper, automatic locking,
 UnifiedPush, Tor and SOCKS support, and a build that needs no Google Play
 services. Wren
 keeps all of that and adds the things people have asked Signal and Molly for
-and never got.
+and never got. If you review privacy software, start with
+[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md) and
+[docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md); they say what each protection
+stops, what it does not, and how to check a build against the source.
 
 A duress passphrase. Type it at the lock screen instead of your real one and
 Wren erases every message, key and setting on the phone, right then.
 
 A panic button that erases. Connect a PanicKit trigger such as
 [Ripple](https://guardianproject.info/apps/info.guardianproject.ripple/) and
-choose whether a press locks Wren or wipes it. Molly can only lock.
+choose whether a press locks Wren or wipes it. Signal and Molly can only lock.
 
 Wipe after wrong unlocks. Five, ten or twenty failed passphrase attempts and
 the data is gone.
@@ -33,7 +36,7 @@ A pure black theme. Dark theme with true black backgrounds for OLED screens,
 asked for on Molly's tracker for years. Settings, Appearance, Theme, Black.
 
 A device check. One screen that reads your phone's security patch date, your
-screen lock, and every privacy setting that matters, says which ones are weak,
+screen lock, and the privacy settings that matter most, says which ones are weak,
 and fixes the ones Wren controls with one tap. The chat list warns you when
 the phone's security updates stopped six months ago.
 
@@ -63,7 +66,7 @@ Signal is the best mainstream messenger and Wren keeps all of it: the same
 protocol, servers, groups, calls and contacts. What Signal will not do is
 protect you from the person holding your unlocked phone, and that is the
 threat most people who need a hardened client actually face. Molly fixed the
-first half of that in 2018 with a passphrase that encrypts the database at
+first half of that in 2019 with a passphrase that encrypts the database at
 rest, and Wren starts from Molly for that reason.
 
 What Molly still does not do, and Wren does:
@@ -73,32 +76,37 @@ What Molly still does not do, and Wren does:
   phone for days. Molly's own tracker has asked for the first of these since
   issue #487 and it is still open there.
 - Get your messages out. Export one chat or all of them as HTML, text, JSON
-  or one encrypted file. Signal can only dump everything as JSON behind a
-  flag; Molly cannot export a chat at all.
+  or one encrypted file. Signal and Molly can only dump everything as JSON
+  behind a remote flag, and their per-chat export is for internal builds.
 - Show you where you stand. One screen reads the phone's security patch
-  date, screen lock and every privacy setting, warns when something is weak,
+  date, screen lock and the privacy settings listed in
+  [docs/DEVICE-CHECK.md](docs/DEVICE-CHECK.md), warns when something is weak,
   and fixes what Wren controls with one tap.
 - Ask before anything risky. The passphrase is required again before an
   export, before the lock is turned off, and before a panic trigger app gets
   control, and the trigger app has to be confirmed by name and signing key.
 - Ship without Google. Molly's unified build has carried Firebase in every
-  APK since December; Wren links it only on request and a script proves any
-  APK clean.
+  APK since December 2025 (Molly commit b698bbd5, and its
+  firebase_messaging.xml); Wren links it only on request and
+  `tools/apk-report.sh` proves any APK clean. [docs/FOSS.md](docs/FOSS.md)
+  has the details.
 - Say what it does not do. The threat model, the audit guide and the panic
   guide name the residual risks, the files to read and the tests to run.
 
 And Wren has a desktop app, which Molly does not:
 [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop) gives Signal
-Desktop the app lock Signal refused, plus duress, a fail-closed proxy and Tor
-setting, and chat export.
+Desktop an app lock, duress, a proxy and Tor setting that keeps the app
+offline when the proxy is down, and one-chat export.
 
 One honest limit: Wren is on Signal 8.20.5 while Signal ships 8.29.4, for the
 reason under "Keeping up with Signal".
 
 ## Status
 
-Wren is new. The first release is 8.20.5-1, on the
-[Releases](https://github.com/munzzyy/wren/releases) page with SHA-256 sums.
+Wren is new. The first release is 8.20.5-1. Look for it on the
+[Releases](https://github.com/munzzyy/wren/releases) page with its SHA-256
+sums; if it is not there yet it is being built and signed, and
+[BUILDING.md](BUILDING.md) has the build.
 The code builds, 2842 unit tests pass in CI, and every feature above is in,
 but none of it has been through a round of real-phone testing by people other
 than me. Treat it as a beta and keep a backup.
@@ -115,16 +123,17 @@ SHA-256: b66420073b986655a97cb35b166fa5a06abd5119545b9e0b21b087d0f71a7d66
 | | Signal | Molly | Wren |
 |---|---|---|---|
 | Passphrase encryption of the database | no | yes | yes |
-| RAM wiper, automatic lock | no | yes | yes |
+| RAM wiper | no | yes | yes |
+| Automatic lock | device screen lock | passphrase lock | passphrase lock |
 | UnifiedPush (no Google push) | no | yes | yes |
 | Tor and SOCKS proxy | no | yes | yes |
-| Runs without Google Play services | no | yes | yes |
+| Runs without Google Play services | yes, websocket fallback | yes | yes |
 | Reproducible builds | yes | yes | set up, first check at the first release |
 | Duress passphrase that wipes | no | no | yes |
 | Wipe after N failed unlocks | no | no | yes |
-| PanicKit responder | no | lock only | lock or wipe |
-| Export one chat to HTML, text or JSON | JSON of all chats, flag-gated | no | yes |
-| Export all chats at once | no | no | yes |
+| PanicKit responder | lock only | lock only | lock or wipe |
+| Export one chat to HTML, text or JSON | internal builds only | internal builds only | yes |
+| Export all chats at once | JSON only, behind a remote flag | JSON only, behind a remote flag | HTML, text, JSON or encrypted |
 | Pure black OLED theme | no | no | yes |
 | Device check with one-tap hardened defaults | no | no | yes |
 | Warning when the phone's security updates are stale | no | no | yes |
@@ -146,7 +155,7 @@ Android, this repository. The phone app, built from Molly.
 Desktop, [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
   built from Signal Desktop for Linux, Windows and macOS. Signal Desktop has no
   app lock at all; Wren Desktop gets a passphrase lock with a duress passphrase,
-  wipe after failed attempts, auto-lock, and the same chat export.
+  wipe after failed attempts, auto-lock, and one-chat export.
 iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   Signal iOS. Honest status: without an Apple developer account there is no
   App Store, no TestFlight and no push notifications, because Apple ties
@@ -164,8 +173,8 @@ iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   32-bit phones, `x86_64` for emulators and some tablets) and a universal file
   that holds all three. Sizes are in [BUILDING.md](BUILDING.md).
 - Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
-  and let it track releases. Set its APK filter to `arm64-v8a` so it picks the
-  right file.
+  and let it track releases. Set its APK filter to `^Wren-v.*-arm64-v8a\.apk$`
+  so it picks the one file for your phone.
 - An F-Droid repository at `https://munzzyy.dev/wren/fdroid/` is planned;
   see [docs/FDROID-REPO.md](docs/FDROID-REPO.md).
 
@@ -242,8 +251,10 @@ are at that moment. Details in [docs/EXPORT.md](docs/EXPORT.md).
 
 ## Keeping up with Signal
 
-Signal clients stop working about 90 days after they were built. A fork that
-falls behind dies. Wren started from Molly, which was on Signal 8.19.2; I
+Signal clients stop working about 90 days after they were built, and Signal
+can also expire a client by its Signal version from the server. A fork that
+falls behind dies, so the native library rebuild in
+[docs/NATIVE.md](docs/NATIVE.md) has a deadline, not just a wish. Wren started from Molly, which was on Signal 8.19.2; I
 merged Signal 8.20.5 on top myself (every conflict and decision is in
 [docs/SIGNAL-MERGE-LOG.md](docs/SIGNAL-MERGE-LOG.md)), so Wren is one step
 ahead of Molly while Signal ships 8.29.4.

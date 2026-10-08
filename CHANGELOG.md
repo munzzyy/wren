@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 8.20.5-1 (2026-10-08)
 
 Forked from Molly v8.19.2-4 (Signal 8.19.2), then merged up to Signal 8.20.5 (see docs/SIGNAL-MERGE-LOG.md).
 

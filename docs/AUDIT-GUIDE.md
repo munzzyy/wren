@@ -318,7 +318,7 @@ Run the unit tests for Wren's code:
 ./gradlew :app:testProdWebsiteDebugUnitTest --tests 'io.github.munzzyy.wren.*'
 ```
 
-There are 86. The ones that carry the security claims:
+There are 201 at the time of writing; the CI test report has the current number. The ones that carry the security claims:
 
 - `app/src/test/java/io/github/munzzyy/wren/duress/PanicDecisionTest.kt`: only
   the connected package can erase, other callers lock at most, a second
