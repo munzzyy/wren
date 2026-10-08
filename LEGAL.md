@@ -1,56 +1,49 @@
-# Legal Information
+# Legal information
 
 ## License
 
-Molly is free software licensed under the GNU Affero General Public License,
-version 3 only (`AGPL-3.0-only`).
+Wren is free software under the GNU Affero General Public License, version 3
+only (`AGPL-3.0-only`). That is the license Signal Android and Molly use, and
+a fork cannot loosen it.
 
-See `LICENSE` for the full license text and `NOTICE` for copyright and
-third-party notices.
+See `LICENSE` for the full text and `NOTICE` for third-party notices.
 
 ## Copyright
 
-Molly includes original work by Molly contributors as well as code derived from
-Signal Android and other third-party components.
+Wren contains code from three places:
 
-For completely new source files originally authored by Molly contributors, we
-commonly use headers such as:
+- Signal Android, copyright Signal Messenger, LLC and contributors.
+- Molly, copyright Molly Instant Messenger and contributors.
+- Changes made for Wren, copyright 2026 Cole Munz and contributors.
+
+New files written for Wren carry this header:
 
 ```text
-Copyright 2026 Molly Instant Messenger
+Copyright 2026 Cole Munz
 SPDX-License-Identifier: AGPL-3.0-only
 ```
 
-Files derived from upstream or third-party code may preserve different
-copyright notices.
+Existing copyright, license and attribution notices stay as they are.
 
-Existing copyright, license, and attribution notices should be kept intact.
+## Cryptography and export
 
-## Cryptography and Export
+This software contains cryptography. Laws on importing, owning, using and
+exporting encryption software differ by country. Check the rules that apply
+to you before using or redistributing Wren.
 
-This distribution includes cryptographic software. Laws on the import,
-possession, use, export, and re-export of encryption software vary by country.
+## No affiliation
 
-Before using or distributing Molly, please check the laws and regulations that
-apply in your jurisdiction.
-
-## No Affiliation
-
-Molly is an independent project and is not affiliated with, endorsed by, or
-sponsored by Signal Messenger, LLC or the Signal Foundation.
+Wren is an independent project. It is not affiliated with, endorsed by or
+sponsored by Signal Messenger, LLC, the Signal Foundation, or the Molly
+project.
 
 ## Trademarks
 
-"Signal" and associated names, marks, and logos are the property of their
-respective owners, including Signal Messenger, LLC where applicable.
-
-Use of third-party names, marks, or logos in this repository is for
-identification, compatibility, or attribution purposes only and does not imply
-affiliation, sponsorship, or endorsement.
+"Signal" and "Molly" and their logos belong to their respective owners. They
+appear in this repository only to identify what Wren is built on and what it
+is compatible with.
 
 ## Warranty
 
-Molly is provided under the AGPL on an "as is" basis, without warranty of any
-kind, to the extent permitted by applicable law.
-
-See `LICENSE` for the full disclaimer and limitation of liability.
+Wren is provided under the AGPL "as is", without warranty of any kind, to the
+extent the law allows. See `LICENSE`.
