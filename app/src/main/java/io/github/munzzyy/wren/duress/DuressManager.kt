@@ -4,6 +4,7 @@ package io.github.munzzyy.wren.duress
 
 import android.content.Context
 import androidx.annotation.WorkerThread
+import io.github.munzzyy.wren.guard.InactivityWipePolicy
 import org.signal.core.util.Util
 import org.signal.core.util.crypto.KeyStoreHelper
 import org.signal.core.util.logging.Log
@@ -49,8 +50,11 @@ object DuressManager {
       if (store.failedAttemptCount != 0) {
         store.failedAttemptCount = FailedAttemptPolicy.onSuccessfulAttempt()
       }
+      if (store.inactivityWipeDays != InactivityWipePolicy.OFF) {
+        store.lastUnlockAt = System.currentTimeMillis()
+      }
     } catch (e: RuntimeException) {
-      Log.w(TAG, "Could not reset failed unlock count", e)
+      Log.w(TAG, "Could not record unlock", e)
     }
   }
 

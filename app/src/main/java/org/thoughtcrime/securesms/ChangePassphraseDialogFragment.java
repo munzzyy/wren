@@ -363,7 +363,15 @@ public class ChangePassphraseDialogFragment extends DialogFragment {
       } else {
         try {
           masterSecret = MasterSecretUtil.changeMasterSecretPassphrase(context, oldPassphrase, newPassphrase);
-        } catch (InvalidPassphraseException | UnrecoverableKeyException e) {
+          if (mode != MODE_ENABLE) {
+            DuressManager.onUnlocked(context);
+          }
+        } catch (InvalidPassphraseException e) {
+          Log.d(TAG, e);
+          if (mode != MODE_ENABLE) {
+            DuressManager.onWrongPassphrase(context, oldPassphrase);
+          }
+        } catch (UnrecoverableKeyException e) {
           Log.d(TAG, e);
         }
       }

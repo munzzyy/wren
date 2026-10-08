@@ -33,6 +33,7 @@ import io.github.munzzyy.wren.export.ChatExportDialog
 import io.github.munzzyy.wren.export.ChatExportFormat
 import io.github.munzzyy.wren.export.ChatExportJob
 import io.github.munzzyy.wren.export.ExportPassphrases
+import io.github.munzzyy.wren.guard.Reauth
 import io.reactivex.rxjava3.kotlin.subscribeBy
 import kotlinx.coroutines.launch
 import org.signal.core.ui.isSplitPane
@@ -713,7 +714,7 @@ class ConversationSettingsFragment :
         clickPref(
           title = DSLSettingsText.from(R.string.ConversationSettingsFragment__export_chat),
           icon = DSLSettingsIcon.from(CoreUiR.drawable.symbol_save_android_24),
-          onClick = { startExport(state.threadId) }
+          onClick = { Reauth.require(this@ConversationSettingsFragment) { startExport(state.threadId) } }
         )
       }
 

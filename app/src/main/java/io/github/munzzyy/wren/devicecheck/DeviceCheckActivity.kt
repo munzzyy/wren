@@ -96,8 +96,23 @@ class DeviceCheckActivity : PassphraseRequiredActivity() {
       CheckId.DURESS_PASSPHRASE -> startActivity(AppSettingsActivity.privacy(this))
       CheckId.REGISTRATION_LOCK -> startActivity(AppSettingsActivity.account(this))
       CheckId.NOTIFICATION_PRIVACY -> startActivity(AppSettingsActivity.notifications(this))
+      CheckId.ORBOT -> onOrbotClick()
       else -> HardenedSetting.forCheck(id)?.let { viewModel.toggle(it) }
     }
+  }
+
+  private fun onOrbotClick() {
+    if (viewModel.state.value.snapshot.routedThroughOrbot) {
+      startActivity(AppSettingsActivity.proxy(this))
+      return
+    }
+
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.DeviceCheck__route_through_orbot_title)
+      .setMessage(R.string.DeviceCheck__route_through_orbot_message)
+      .setPositiveButton(R.string.DeviceCheck__route_through_orbot) { _, _ -> viewModel.toggle(HardenedSetting.ORBOT) }
+      .setNegativeButton(android.R.string.cancel, null)
+      .show()
   }
 
   private fun openFirst(vararg intents: Intent) {
@@ -254,6 +269,7 @@ class DeviceCheckActivity : PassphraseRequiredActivity() {
       CheckId.READ_RECEIPTS -> R.string.preferences__read_receipts
       CheckId.TYPING_INDICATORS -> R.string.preferences__typing_indicators
       CheckId.BLOCK_UNKNOWN -> R.string.preferences__block_unknown
+      CheckId.ORBOT -> R.string.DeviceCheck__route_through_orbot
     }
   }
 
@@ -295,6 +311,7 @@ class DeviceCheckActivity : PassphraseRequiredActivity() {
       CheckId.READ_RECEIPTS -> stringResource(if (good) R.string.DeviceCheck__off else R.string.DeviceCheck__read_receipts_on)
       CheckId.TYPING_INDICATORS -> stringResource(if (good) R.string.DeviceCheck__off else R.string.DeviceCheck__typing_indicators_on)
       CheckId.BLOCK_UNKNOWN -> stringResource(if (good) R.string.DeviceCheck__on else R.string.DeviceCheck__block_unknown_off)
+      CheckId.ORBOT -> stringResource(if (good) R.string.DeviceCheck__orbot_on else R.string.DeviceCheck__orbot_off)
     }
   }
 
@@ -307,6 +324,7 @@ class DeviceCheckActivity : PassphraseRequiredActivity() {
       HardenedSetting.READ_RECEIPTS -> R.string.DeviceCheck__turn_off_read_receipts
       HardenedSetting.TYPING_INDICATORS -> R.string.DeviceCheck__turn_off_typing_indicators
       HardenedSetting.BLOCK_UNKNOWN -> R.string.DeviceCheck__turn_on_block_unknown
+      HardenedSetting.ORBOT -> R.string.DeviceCheck__route_through_orbot
     }
   }
 }

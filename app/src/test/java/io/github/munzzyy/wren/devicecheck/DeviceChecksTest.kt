@@ -50,7 +50,8 @@ class DeviceChecksTest {
       base.copy(linkPreviews = true) to (CheckId.LINK_PREVIEWS to CheckStatus.WARNING),
       base.copy(readReceipts = true) to (CheckId.READ_RECEIPTS to CheckStatus.WARNING),
       base.copy(typingIndicators = true) to (CheckId.TYPING_INDICATORS to CheckStatus.WARNING),
-      base.copy(blockUnknown = false) to (CheckId.BLOCK_UNKNOWN to CheckStatus.WARNING)
+      base.copy(blockUnknown = false) to (CheckId.BLOCK_UNKNOWN to CheckStatus.WARNING),
+      base.copy(routedThroughOrbot = false) to (CheckId.ORBOT to CheckStatus.WARNING)
     )
 
     for ((snapshot, expected) in cases) {
@@ -71,6 +72,14 @@ class DeviceChecksTest {
     val expected = CheckId.entries.toSet() - setOf(CheckId.SECURITY_PATCH, CheckId.ANDROID_VERSION, CheckId.SCREEN_LOCK)
     assertEquals(expected, flagged)
     assertEquals(3, DeviceChecks.countGood(DeviceChecks.evaluate(DeviceSnapshots.stock, today)))
+  }
+
+  @Test
+  fun `the Orbot row only shows when Orbot is installed`() {
+    val withoutOrbot = DeviceSnapshots.stock.copy(orbotInstalled = false)
+    val ids = DeviceChecks.evaluate(withoutOrbot, today).map { it.id }
+    assertEquals(CheckId.entries.toList() - CheckId.ORBOT, ids)
+    assertEquals(CheckStatus.WARNING, statuses(DeviceSnapshots.stock)[CheckId.ORBOT])
   }
 
   @Test

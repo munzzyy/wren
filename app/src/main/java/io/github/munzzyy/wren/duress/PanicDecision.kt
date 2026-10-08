@@ -18,6 +18,12 @@ enum class PanicResponse {
 }
 
 enum class PanicConnectResult {
+  ASK_USER,
+  ALREADY_CONNECTED,
+  REFUSE
+}
+
+enum class PanicConfirmResult {
   CONNECT,
   ALREADY_CONNECTED,
   REFUSE
@@ -37,13 +43,26 @@ object PanicDecision {
   /**
    * A different app cannot replace the connected trigger; the user has to
    * disconnect it in settings first, so no app can quietly take over a wipe.
+   * A first connect is never stored until the user allows it.
    */
   fun connect(connectedPackage: String?, callingPackage: String?, ownPackage: String): PanicConnectResult {
     return when {
       callingPackage.isNullOrEmpty() || callingPackage == ownPackage -> PanicConnectResult.REFUSE
-      connectedPackage.isNullOrEmpty() -> PanicConnectResult.CONNECT
+      connectedPackage.isNullOrEmpty() -> PanicConnectResult.ASK_USER
       connectedPackage == callingPackage -> PanicConnectResult.ALREADY_CONNECTED
       else -> PanicConnectResult.REFUSE
+    }
+  }
+
+  /** The stored trigger is read again at answer time, so a trigger connected meanwhile still wins. */
+  fun confirm(connectedPackage: String?, pendingPackage: String?, ownPackage: String, allowed: Boolean): PanicConfirmResult {
+    if (!allowed) {
+      return PanicConfirmResult.REFUSE
+    }
+    return when (connect(connectedPackage, pendingPackage, ownPackage)) {
+      PanicConnectResult.ASK_USER -> PanicConfirmResult.CONNECT
+      PanicConnectResult.ALREADY_CONNECTED -> PanicConfirmResult.ALREADY_CONNECTED
+      PanicConnectResult.REFUSE -> PanicConfirmResult.REFUSE
     }
   }
 

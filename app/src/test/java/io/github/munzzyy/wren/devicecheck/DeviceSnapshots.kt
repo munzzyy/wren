@@ -19,7 +19,9 @@ object DeviceSnapshots {
     readReceipts = false,
     typingIndicators = false,
     blockUnknown = true,
-    isPrimaryDevice = true
+    isPrimaryDevice = true,
+    orbotInstalled = true,
+    routedThroughOrbot = true
   )
 
   val stock = DeviceSnapshot(
@@ -37,6 +39,8 @@ object DeviceSnapshots {
     readReceipts = true,
     typingIndicators = true,
     blockUnknown = false,
-    isPrimaryDevice = true
+    isPrimaryDevice = true,
+    orbotInstalled = true,
+    routedThroughOrbot = false
   )
 }

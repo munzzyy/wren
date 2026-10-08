@@ -42,9 +42,34 @@ class PanicDecisionTest {
   }
 
   @Test
-  fun `first connect is accepted`() {
-    assertEquals(PanicConnectResult.CONNECT, PanicDecision.connect(null, ripple, own))
-    assertEquals(PanicConnectResult.CONNECT, PanicDecision.connect("", ripple, own))
+  fun `first connect waits for the user`() {
+    assertEquals(PanicConnectResult.ASK_USER, PanicDecision.connect(null, ripple, own))
+    assertEquals(PanicConnectResult.ASK_USER, PanicDecision.connect("", ripple, own))
+  }
+
+  @Test
+  fun `allowing a pending connect stores it`() {
+    assertEquals(PanicConfirmResult.CONNECT, PanicDecision.confirm(null, ripple, own, allowed = true))
+    assertEquals(PanicConfirmResult.CONNECT, PanicDecision.confirm("", ripple, own, allowed = true))
+  }
+
+  @Test
+  fun `denying a pending connect refuses it`() {
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(null, ripple, own, allowed = false))
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(ripple, ripple, own, allowed = false))
+  }
+
+  @Test
+  fun `a trigger connected while the prompt was open is not replaced`() {
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(other, ripple, own, allowed = true))
+    assertEquals(PanicConfirmResult.ALREADY_CONNECTED, PanicDecision.confirm(ripple, ripple, own, allowed = true))
+  }
+
+  @Test
+  fun `allowing a pending connect without a real app is refused`() {
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(null, null, own, allowed = true))
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(null, "", own, allowed = true))
+    assertEquals(PanicConfirmResult.REFUSE, PanicDecision.confirm(null, own, own, allowed = true))
   }
 
   @Test

@@ -22,6 +22,7 @@ import io.github.munzzyy.wren.export.AllChatsExportJob
 import io.github.munzzyy.wren.export.ChatExportDialog
 import io.github.munzzyy.wren.export.ChatExportFormat
 import io.github.munzzyy.wren.export.ExportPassphrases
+import io.github.munzzyy.wren.guard.Reauth
 import kotlinx.coroutines.launch
 import org.signal.core.ui.compose.ComposeFragment
 import org.signal.core.ui.compose.DayNightPreviews
@@ -153,7 +154,7 @@ class ChatsSettingsFragment : ComposeFragment() {
     }
 
     override fun onExportPlaintextChatHistoryClick() {
-      viewModel.requestChatExportType()
+      Reauth.require(this@ChatsSettingsFragment) { viewModel.requestChatExportType() }
     }
 
     override fun onCancelInFlightExport() {
@@ -161,7 +162,7 @@ class ChatsSettingsFragment : ComposeFragment() {
     }
 
     override fun onExportAllChatsClick() {
-      startExportAll()
+      Reauth.require(this@ChatsSettingsFragment) { startExportAll() }
     }
 
     // region ChatExportCallback
