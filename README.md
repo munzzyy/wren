@@ -217,6 +217,9 @@ means either rebuilding those forks for the newer versions, or using Signal's
 own builds and giving up the call proxy. I am not making that trade quietly;
 it is written here so you can see it.
 
+[docs/NATIVE.md](docs/NATIVE.md) is the recipe for rebuilding those two
+libraries from Molly's patches.
+
 A daily workflow fetches both upstreams and opens an issue within a day of
 Molly moving, with the exact commit range and the version gap, so the lag is always
 public. `tools/merge-molly.sh` does a Molly merge and reruns the rebrand.
