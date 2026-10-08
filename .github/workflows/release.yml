@@ -31,7 +31,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: "${{ env.TAG_REF }}"
 
@@ -39,13 +39,13 @@ jobs:
         uses: ./.github/actions/disk-cleanup
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-read-only: true
 
@@ -102,6 +102,27 @@ jobs:
         run: ./name-outputs.sh "$TAG_REF" "$GITHUB_WORKSPACE/dist"
         working-directory: reproducible-builds
 
+      # libargon2.so and libnative-utils.so are Molly prebuilts linked for 4 KB pages, so they only warn.
+      - name: Check the universal APKs
+        shell: bash
+        run: |
+          apks=()
+          for apk in dist/*.apk; do
+            case "$apk" in
+              *-arm64-v8a.apk|*-armeabi-v7a.apk|*-x86_64.apk) ;;
+              *) [ -f "$apk" ] && apks+=("$apk") ;;
+            esac
+          done
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No universal APK to check" >&2
+            exit 1
+          fi
+          flags=("--known-4k=libargon2.so,libnative-utils.so")
+          if [ "$HAVE_KEYSTORE" = "true" ]; then
+            flags+=(--require-signed)
+          fi
+          tools/apk-report.sh "${flags[@]}" "${apks[@]}"
+
       - name: Compute checksums and notes
         run: |
           cd dist
@@ -132,7 +153,7 @@ jobs:
           } > release-notes.md
 
       - name: Upload release files
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release
           path: |
@@ -153,12 +174,13 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release
           path: dist
 
       - name: Check version for upgrade compatibility
+        shell: bash
         run: |
           mkdir latest
           name=$(gh release view --json assets --jq '
@@ -171,7 +193,11 @@ jobs:
             exit 0
           fi
           gh release download --pattern "$name" --dir latest
-          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          aapt=$(find "${ANDROID_HOME:-/nonexistent}/build-tools" -name aapt 2> /dev/null | sort -V | tail -1)
+          if [ -z "$aapt" ] || [ ! -x "$aapt" ]; then
+            echo "aapt not found under \$ANDROID_HOME/build-tools, cannot compare version codes" >&2
+            exit 1
+          fi
           version_code() {
             "$aapt" d badging "$1" | sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p"
           }
@@ -179,10 +205,20 @@ jobs:
             find "$1" -maxdepth 1 -name 'Wren-*.apk' ! -name '*website*' \
               ! -name '*-arm64-v8a.apk' ! -name '*-armeabi-v7a.apk' ! -name '*-x86_64.apk' | sort | head -1
           }
-          latest=$(version_code "$(pick latest)")
-          build=$(version_code "$(pick dist)")
+          latest_apk=$(pick latest)
+          build_apk=$(pick dist)
+          if [ -z "$latest_apk" ] || [ -z "$build_apk" ]; then
+            echo "Missing an APK to compare (latest '$latest_apk', build '$build_apk')" >&2
+            exit 1
+          fi
+          latest=$(version_code "$latest_apk")
+          build=$(version_code "$build_apk")
           echo "Latest version code: $latest"
           echo "Build version code: $build"
+          if ! [[ "$latest" =~ ^[0-9]+$ && "$build" =~ ^[0-9]+$ ]]; then
+            echo "Could not read both version codes from aapt" >&2
+            exit 1
+          fi
           if [ "$build" -le "$latest" ]; then
             echo "Build version code must be greater than the latest version code" >&2
             exit 1

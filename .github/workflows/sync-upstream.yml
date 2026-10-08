@@ -39,7 +39,12 @@ jobs:
           git fetch --no-tags molly main
           git fetch --no-tags signal main
           curl -fsSL -o "$RUNNER_TEMP/latest.json" https://updates.signal.org/android/latest.json
-          echo "STABLE_TAG=v$(jq -r .versionName "$RUNNER_TEMP/latest.json")" >> "$GITHUB_ENV"
+          version=$(jq -r .versionName "$RUNNER_TEMP/latest.json")
+          if ! [[ "$version" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+            echo "::error::unexpected versionName from updates.signal.org"
+            exit 1
+          fi
+          echo "STABLE_TAG=v$version" >> "$GITHUB_ENV"
 
       - name: Update molly-main
         run: |
