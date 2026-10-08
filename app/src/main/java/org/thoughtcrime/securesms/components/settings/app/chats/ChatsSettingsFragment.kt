@@ -1,6 +1,10 @@
 package org.thoughtcrime.securesms.components.settings.app.chats
 
+import android.content.ActivityNotFoundException
 import android.net.Uri
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.SnackbarHostState
@@ -14,6 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
+import io.github.munzzyy.wren.export.AllChatsExportJob
+import io.github.munzzyy.wren.export.ChatExportDialog
+import io.github.munzzyy.wren.export.ChatExportFormat
 import kotlinx.coroutines.launch
 import org.signal.core.ui.compose.ComposeFragment
 import org.signal.core.ui.compose.DayNightPreviews
@@ -24,6 +31,7 @@ import org.signal.core.ui.compose.Scaffolds
 import org.signal.core.ui.compose.SignalIcons
 import org.signal.core.ui.compose.Snackbars
 import org.signal.core.ui.compose.Texts
+import org.signal.core.util.concurrent.SignalExecutors
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.backup.isIdle
 import org.thoughtcrime.securesms.backup.v2.ui.status.BackupCreationProgressRow
@@ -32,6 +40,9 @@ import org.thoughtcrime.securesms.compose.rememberStatusBarColorNestedScrollModi
 import org.thoughtcrime.securesms.keyvalue.protos.LocalBackupCreationProgress
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
 
+private const val STATE_PENDING_EXPORT_FORMAT = "pending_export_all_format"
+private const val STATE_PENDING_EXPORT_MEDIA = "pending_export_all_media"
+
 /**
  * Displays a list of chats settings options to the user, including
  * generating link previews and keeping muted chats archived.
@@ -39,6 +50,25 @@ import org.thoughtcrime.securesms.util.navigation.safeNavigate
 class ChatsSettingsFragment : ComposeFragment() {
 
   private val viewModel: ChatsSettingsViewModel by viewModels()
+
+  private var pendingExport: PendingExport? = null
+  private val exportFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> onExportFolderChosen(uri) }
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val format = savedInstanceState?.getString(STATE_PENDING_EXPORT_FORMAT)
+    if (format != null) {
+      pendingExport = PendingExport(ChatExportFormat.valueOf(format), savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true))
+    }
+  }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    pendingExport?.let {
+      outState.putString(STATE_PENDING_EXPORT_FORMAT, it.format.name)
+      outState.putBoolean(STATE_PENDING_EXPORT_MEDIA, it.includeMedia)
+    }
+  }
 
   override fun onResume() {
     super.onResume()
@@ -55,6 +85,32 @@ class ChatsSettingsFragment : ComposeFragment() {
       callbacks = callbacks
     )
   }
+
+  private fun startExportAll() {
+    ChatExportDialog.show(requireContext(), R.string.ChatsSettingsFragment__export_all_chats) { format, includeMedia ->
+      pendingExport = PendingExport(format, includeMedia)
+      try {
+        exportFolderLauncher.launch(null)
+      } catch (e: ActivityNotFoundException) {
+        pendingExport = null
+        Toast.makeText(requireContext(), R.string.ChatExportDialog__no_folder_picker, Toast.LENGTH_LONG).show()
+      }
+    }
+  }
+
+  private fun onExportFolderChosen(treeUri: Uri?) {
+    val export = pendingExport ?: return
+    pendingExport = null
+    if (treeUri == null) return
+
+    val appContext = requireContext().applicationContext
+    SignalExecutors.BOUNDED.execute {
+      AllChatsExportJob.enqueue(appContext, export.format, export.includeMedia, treeUri)
+    }
+    Toast.makeText(requireContext(), R.string.ChatExportDialog__export_all_started, Toast.LENGTH_LONG).show()
+  }
+
+  private data class PendingExport(val format: ChatExportFormat, val includeMedia: Boolean)
 
   private inner class Callbacks : ChatsSettingsCallbacks {
     override fun onNavigationClick() {
@@ -97,6 +153,10 @@ class ChatsSettingsFragment : ComposeFragment() {
       viewModel.cancelChatExport()
     }
 
+    override fun onExportAllChatsClick() {
+      startExportAll()
+    }
+
     // region ChatExportCallback
 
     override fun onConfirmExport(withMedia: Boolean) {
@@ -130,6 +190,7 @@ private interface ChatsSettingsCallbacks : ChatExportCallbacks {
   fun onEnterKeySendsChanged(enabled: Boolean) = Unit
   fun onExportPlaintextChatHistoryClick() = Unit
   fun onCancelInFlightExport() = Unit
+  fun onExportAllChatsClick() = Unit
 
   object Empty : ChatsSettingsCallbacks, ChatExportCallbacks by ChatExportCallbacks.Empty
 }
@@ -221,11 +282,23 @@ private fun ChatsSettingsScreen(
         }
       }
 
-      if (state.isPlaintextExportEnabled) {
-        item {
-          Dividers.Default()
-        }
+      item {
+        Dividers.Default()
+      }
 
+      item(key = "export_all_chats_row") {
+        Rows.TextRow(
+          text = stringResource(R.string.ChatsSettingsFragment__export_all_chats),
+          label = stringResource(R.string.ChatsSettingsFragment__export_all_chats_label),
+          onClick = {
+            plaintextBiometricsAuthentication.withBiometricsAuthentication {
+              callbacks.onExportAllChatsClick()
+            }
+          }
+        )
+      }
+
+      if (state.isPlaintextExportEnabled) {
         if (state.plaintextExportProgress.isIdle) {
           item(key = "export_chat_history_row") {
             Rows.TextRow(

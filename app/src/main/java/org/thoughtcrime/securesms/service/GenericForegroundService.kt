@@ -23,6 +23,7 @@ import org.thoughtcrime.securesms.notifications.NotificationChannels
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import org.signal.core.ui.R as CoreUiR
 
 class GenericForegroundService : Service() {
   private val binder: IBinder = LocalBinder()
@@ -44,6 +45,8 @@ class GenericForegroundService : Service() {
     private const val EXTRA_PROGRESS_MAX = "extra_progress_max"
     private const val EXTRA_PROGRESS_INDETERMINATE = "extra_progress_indeterminate"
     private const val EXTRA_CONTENT_INTENT = "extra_content_intent"
+    private const val EXTRA_ACTION_TITLE = "extra_action_title"
+    private const val EXTRA_ACTION_INTENT = "extra_action_intent"
     private const val ACTION_START = "start"
     private const val ACTION_STOP = "stop"
 
@@ -81,7 +84,9 @@ class GenericForegroundService : Service() {
       task: String,
       channelId: String = DEFAULT_ENTRY.channelId,
       @DrawableRes iconRes: Int = DEFAULT_ENTRY.iconRes,
-      contentIntent: PendingIntent? = null
+      contentIntent: PendingIntent? = null,
+      actionTitle: String? = null,
+      actionIntent: PendingIntent? = null
     ): NotificationController {
       val id = NEXT_ID.getAndIncrement()
       Log.i(TAG, "[startForegroundTask] Task: $task, ID: $id")
@@ -93,6 +98,10 @@ class GenericForegroundService : Service() {
         putExtra(EXTRA_ICON_RES, iconRes)
         putExtra(EXTRA_ID, id)
         if (contentIntent != null) putExtra(EXTRA_CONTENT_INTENT, contentIntent)
+        if (actionTitle != null && actionIntent != null) {
+          putExtra(EXTRA_ACTION_TITLE, actionTitle)
+          putExtra(EXTRA_ACTION_INTENT, actionIntent)
+        }
       }
 
       ForegroundServiceUtil.start(context, intent)
@@ -243,6 +252,11 @@ class GenericForegroundService : Service() {
           .setProgress(active.progressMax, active.progress, active.indeterminate)
           .setContentIntent(active.contentIntent ?: PendingIntent.getActivity(this, 0, MainActivity.clearTop(this), mutable()))
           .setVibrate(longArrayOf(0))
+          .apply {
+            if (active.actionTitle != null && active.actionIntent != null) {
+              addAction(CoreUiR.drawable.symbol_x_24, active.actionTitle, active.actionIntent)
+            }
+          }
           .build()
       )
     } catch (e: Exception) {
@@ -286,7 +300,9 @@ class GenericForegroundService : Service() {
     val progressMax: Int,
     val progress: Int,
     val indeterminate: Boolean,
-    val contentIntent: PendingIntent? = null
+    val contentIntent: PendingIntent? = null,
+    val actionTitle: String? = null,
+    val actionIntent: PendingIntent? = null
   ) {
     override fun toString(): String {
       return "ChannelId: $channelId, ID: $id, Progress: $progress/$progressMax ${if (indeterminate) "indeterminate" else "determinate"}"
@@ -302,7 +318,9 @@ class GenericForegroundService : Service() {
           progressMax = intent.getIntExtra(EXTRA_PROGRESS_MAX, DEFAULT_ENTRY.progressMax),
           progress = intent.getIntExtra(EXTRA_PROGRESS, DEFAULT_ENTRY.progress),
           indeterminate = intent.getBooleanExtra(EXTRA_PROGRESS_INDETERMINATE, DEFAULT_ENTRY.indeterminate),
-          contentIntent = IntentCompat.getParcelableExtra(intent, EXTRA_CONTENT_INTENT, PendingIntent::class.java)
+          contentIntent = IntentCompat.getParcelableExtra(intent, EXTRA_CONTENT_INTENT, PendingIntent::class.java),
+          actionTitle = intent.getStringExtra(EXTRA_ACTION_TITLE),
+          actionIntent = IntentCompat.getParcelableExtra(intent, EXTRA_ACTION_INTENT, PendingIntent::class.java)
         )
       }
     }

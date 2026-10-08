@@ -4,6 +4,7 @@ import android.app.Application;
 
 import androidx.annotation.NonNull;
 
+import io.github.munzzyy.wren.export.AllChatsExportJob;
 import io.github.munzzyy.wren.export.ChatExportJob;
 
 import org.thoughtcrime.securesms.database.SignalDatabase;
@@ -127,6 +128,7 @@ public final class JobManagerFactories {
     return new HashMap<>() {{
       put(AccountConsistencyWorkerJob.KEY,             new AccountConsistencyWorkerJob.Factory());
       put(AdminDeleteSendJob.KEY,                      new AdminDeleteSendJob.Factory());
+      put(AllChatsExportJob.KEY,                       new AllChatsExportJob.Factory());
       put("AllDataSyncRequestJob",                     new FailingJob.Factory()); // MOLLY
       put(AnalyzeDatabaseJob.KEY,                      new AnalyzeDatabaseJob.Factory());
       put(ApkUpdateJob.KEY,                            new ApkUpdateJob.Factory());
