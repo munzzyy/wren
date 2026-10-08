@@ -12,6 +12,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.signal.core.util.Stopwatch;
+import org.signal.core.util.UnableToStartException;
 import org.signal.core.util.androidx.DocumentFileUtil;
 import org.signal.core.util.androidx.DocumentFileUtil.OperationResult;
 import org.signal.core.util.crypto.AttachmentSecretProvider;
