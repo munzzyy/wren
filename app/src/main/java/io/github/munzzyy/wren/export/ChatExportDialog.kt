@@ -6,15 +6,20 @@ package io.github.munzzyy.wren.export
 import android.content.Context
 import android.widget.CheckBox
 import android.widget.RadioGroup
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.thoughtcrime.securesms.R
 
 object ChatExportDialog {
 
-  fun show(context: Context, onConfirm: (format: ChatExportFormat, includeMedia: Boolean) -> Unit) {
+  fun show(
+    context: Context,
+    @StringRes title: Int = R.string.ConversationSettingsFragment__export_chat,
+    onConfirm: (format: ChatExportFormat, includeMedia: Boolean) -> Unit
+  ) {
     MaterialAlertDialogBuilder(context)
-      .setTitle(R.string.ConversationSettingsFragment__export_chat)
+      .setTitle(title)
       .setView(R.layout.chat_export_dialog)
       .setNegativeButton(android.R.string.cancel, null)
       .setPositiveButton(R.string.ChatExportDialog__choose_folder) { dialog, _ ->
