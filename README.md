@@ -1,153 +1,184 @@
-# Molly
+# Wren
 
-[![Test](https://github.com/mollyim/mollyim-android/workflows/Test/badge.svg)](https://github.com/mollyim/mollyim-android/actions)
-[![Reproducible build](https://github.com/mollyim/mollyim-android/actions/workflows/reprocheck.yml/badge.svg)](https://github.com/mollyim/mollyim-android/actions/workflows/reprocheck.yml)
-[![Translation status](https://hosted.weblate.org/widgets/molly-instant-messenger/-/svg-badge.svg)](https://hosted.weblate.org/engage/molly-instant-messenger/?utm_source=widget)
-[![Financial contributors](https://opencollective.com/mollyim/tiers/badge.svg)](https://opencollective.com/mollyim#category-CONTRIBUTE)
-[![Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=flat-square)](https://cloudsmith.com)
+[![Test](https://github.com/munzzyy/wren/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/wren/actions/workflows/test.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
-Molly is a hardened version of [Signal](https://github.com/signalapp/Signal-Android) for Android, the fast simple yet secure messaging app by [Signal Foundation](https://signal.org).
+Wren is a hardened Signal client for Android. It is a fork of
+[Molly](https://github.com/mollyim/mollyim-android), which is a fork of
+[Signal](https://github.com/signalapp/Signal-Android). It talks to Signal's
+servers, so your contacts, groups and calls stay exactly where they are.
 
-## Introduction
+Molly adds a passphrase lock for the database, a RAM wiper, automatic locking,
+UnifiedPush, Tor and SOCKS support, and a build with no Google code. Wren
+keeps all of that and adds the things people have asked Signal and Molly for
+and never got.
 
-Back in 2018, Signal allowed the user to set a passphrase to secure the local message database. But this option was removed with the introduction of file-based encryption on Android. Molly brings it back again with additional security features.
+A duress passphrase. Type it at the lock screen instead of your real one and
+Wren erases every message, key and setting on the phone, right then.
 
-Molly connects to Signal's servers, so you can chat with your Signal contacts seamlessly. Before signing up, please remember to review the [Signal Terms & Privacy Policy](https://signal.org/legal/).
+A panic button that erases. Connect a PanicKit trigger such as
+[Ripple](https://guardianproject.info/apps/info.guardianproject.ripple/) and
+choose whether a press locks Wren or wipes it. Molly can only lock.
 
-We update Molly every two weeks to include the latest Signal features and fixes. The exceptions are security patches, which are applied as soon as they are available.
+Wipe after wrong unlocks. Five, ten or twenty failed passphrase attempts and
+the data is gone.
 
-## Download
+Export any chat. One chat, as HTML you can open in a browser, plain text, or
+JSON, with the photos, voice notes and files next to it. Signal only offers a
+full backup in its own format.
 
-You can download the app from GitHub's [Releases](https://github.com/mollyim/mollyim-android/releases/latest) page or install it from the [Molly F-Droid Repo](https://molly.im/fdroid/):
+## Status
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://molly.im/fdroid/)
+Wren is new. There is no release yet and no signing certificate to verify
+against. The code builds, the unit tests pass, and the features above are
+implemented, but they have not been through a round of real-phone testing by
+people other than me. Treat the first release as a beta and keep a backup.
 
-There are two versions available: **Molly** or **Molly-FOSS**. Learn the differences [below](#free-and-open-source) and download the right one for you.
+The first build to download will land on the
+[Releases](https://github.com/munzzyy/wren/releases) page, with SHA-256
+sums and the signing fingerprint written here the same day.
 
-You can also get **Molly-FOSS** from [Accrescent](https://accrescent.app/):
+## How Wren compares
 
-<a href="https://accrescent.app/app/im.molly.app">
-   <img alt="Get it on Accrescent"
-      src="https://accrescent.app/badges/get-it-on.png"
-      height="80">
-</a>
+| | Signal | Molly | Wren |
+|---|---|---|---|
+| Passphrase encryption of the database | no | yes | yes |
+| RAM wiper, automatic lock | no | yes | yes |
+| UnifiedPush (no Google push) | no | yes | yes |
+| Tor and SOCKS proxy | no | yes | yes |
+| Build without Google code | no | yes | yes |
+| Reproducible builds | yes | yes | yes |
+| Duress passphrase that wipes | no | no | yes |
+| Wipe after N failed unlocks | no | no | yes |
+| PanicKit responder | lock only | lock only | lock or wipe |
+| Export one chat to HTML, text or JSON | no | no | yes |
 
-To [verify](https://developer.android.com/studio/command-line/apksigner#usage-verify) the APK, use the following signing certificate fingerprints:
+Everything else Signal does, Wren does, because it is Signal underneath.
+
+## Install
+
+Nothing to install yet. When the first release is out:
+
+- Download the APK from [Releases](https://github.com/munzzyy/wren/releases)
+  and check the SHA-256 sum.
+- Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
+  and let it track releases.
+- An F-Droid repository at `https://munzzyy.dev/wren/fdroid/` is planned;
+  see [docs/FDROID-REPO.md](docs/FDROID-REPO.md).
+
+Wren uses the package id `io.github.munzzyy.wren`, so it installs next to
+Signal and Molly without touching them. Android 8.1 or newer.
+
+## Moving from Signal or Molly
+
+Wren reads the same local backups Signal and Molly write. Make a backup in
+the old app, install Wren, restore from that file, and the old app can be
+removed. Backups must come from the same or an older Signal version than
+the one Wren is built on.
+
+If you want to try Wren before moving your number, link it to your existing
+Signal account as a secondary device (Settings, Linked devices). That is also
+the safe way to test the duress wipe: it only erases the linked device.
+
+Molly's own guide, [Migrating From
+Signal](https://github.com/mollyim/mollyim-android/wiki/Migrating-From-Signal),
+applies to Wren as written.
+
+## The duress passphrase, honestly
+
+Settings, Privacy, Data at rest. The duress passphrase only exists when the
+regular passphrase lock is on. It costs the same to try as the real
+passphrase, so it cannot be brute-forced from a copy of the app's files.
+
+What a wipe does: deletes Wren's database, keys, preferences, caches and
+attachments, then the app exits. There is no undo and no confirmation.
+
+What a wipe does not do:
+
+- It does not touch backups or chat exports you saved elsewhere.
+- It does not erase your messages from other people's phones or from your
+  linked devices.
+- It does not unregister your number. Turn on Signal's Registration Lock PIN
+  so nobody can re-register it.
+- It does not promise anything about flash storage forensics. Android's
+  file-based encryption helps, Wren's passphrase helps, a wipe is not a
+  guarantee.
+- It does nothing if the phone was copied before the wipe.
+
+[docs/DURESS.md](docs/DURESS.md) has the full threat model.
+
+## Chat export
+
+Open a chat, tap the name, Export chat. Pick HTML, text or JSON, choose
+whether to include media, pick a folder. Wren writes `chat.html` (or `.txt`,
+`.json`) and a `media/` folder next to it and shows a notification when it is
+done. The export is not encrypted. Disappearing messages are exported as they
+are at that moment. Details in [docs/EXPORT.md](docs/EXPORT.md).
+
+## Keeping up with Signal
+
+Signal clients stop working about 90 days after they were built. A fork that
+falls behind dies. Wren merges Molly, and Molly merges Signal, so Wren is
+only as current as Molly is. Right now that is Signal 8.19.2 while Signal
+ships 8.29.3, and merging Signal directly into Wren is the first job after
+this release.
+
+A daily workflow fetches both upstreams and opens an issue the moment Molly
+moves, with the exact commit range and the version gap, so the lag is always
+public. `tools/merge-molly.sh` does the merge and reruns the rebrand.
+
+## Build it yourself
+
+See [BUILDING.md](BUILDING.md). The short version: JDK 21, the Android SDK,
+and
+
+```sh
+./gradlew :app:assembleProdStoreRelease
 ```
-SHA-256: 6aa80fdf4a8cc13737cfb434fc0cde486f09cf8fcda21a67bea5ee1ca2700886
-SHA-1: 49ce310cdd0c09c8c34eb31a8005c6bf13f5a4f1
-```
 
-## Features
+`prodStore` has no in-app updater and is what ships on GitHub. `prodWebsite`
+checks the Wren F-Droid repository for updates. The build is reproducible;
+[reproducible-builds/README.md](reproducible-builds/README.md) explains how to
+check a release against the source.
 
-Molly has unique features compared to Signal:
+Molly's build takes the app name and package id from `app/gradle.properties`,
+which is what makes Wren possible without touching thousands of files. After
+every merge, `tools/rebrand.py` rewrites the app name in all 135 string
+resource files and leaves MollySocket alone.
 
-- **Data encryption at rest** - Protect your app database with [passphrase encryption](https://github.com/mollyim/mollyim-android/wiki/Data-Encryption-At-Rest)
-- **Secure RAM wiper** - Securely shred sensitive data from device memory
-- **Automatic lock** - Lock the app automatically under user-defined conditions
-- **Multi-device support** - Link multiple devices to a single Signal account, including Android tablets
-- **UnifiedPush** - Receive push notifications without Google through the UnifiedPush protocol
-- **Block unknown contacts** - Block messages and calls from unknown senders for security and anti-spam
-- **Disappearing call history** - Clear call logs together with expiring messages
-- **Custom backup scheduling** - Set daily or weekly interval and the number of backups to retain
-- **SOCKS proxy and Tor support** - Tunnel app network traffic via proxy and Orbot
-- **Debug logs are optional** - Android logging can be disabled
+## Questions people ask
 
-Additionally, you will find all the features of Signal, along with some minor tweaks and improvements.
+Is a third-party client allowed on Signal's servers? Signal does not
+support them and could block them. It has tolerated Molly since 2020. Wren
+behaves the same way Molly does on the network and uses no Signal branding.
+Read the [Signal Terms](https://signal.org/legal/) before you register.
 
-## Free and Open-Source
+Why not just add this to Molly? Molly's tracker has asked for a duress
+password since 2023. I wanted it on my own phone this year, and a fork is how
+you get there. Fixes that belong upstream go upstream.
 
-Molly is open-source just like Signal. But Signal depends on proprietary Google software for some features.
+Can I run Wren next to Signal or Molly? Yes, with a different number, or
+as a linked device of the same account.
 
-To support a 100% free and auditable app, Molly comes in two versions: one with proprietary blobs like Signal, and one without. They are called Molly and Molly-FOSS, respectively. You can install the flavor of your choice at any time, and it will replace any previously installed version. The data and settings will be preserved so that you do not have to re-register.
+Which version should I install? Wren is built without Google code, like
+Molly-FOSS. Push notifications come over a WebSocket or UnifiedPush.
 
-### Feature Comparison
+Where is the desktop app? There is none. Link Signal Desktop to your
+account the normal way.
 
-Here's how some key features work in different versions of the app:
+## Contributing
 
-| Feature                           | Molly-FOSS       | Molly                | Signal               |
-| --------------------------------- | ---------------- | -------------------- | -------------------- |
-| Push notifications <sup>(1)</sup> | ✔ WebSocket<br>✔ UnifiedPush | ⚠ FCM<br>✔ WebSocket<br>✔ UnifiedPush | ⚠ FCM<br>✔ WebSocket |
-| Location sharing                 | ✔ OpenStreetMap  | ⚠ Google Maps        | ⚠ Google Maps        |
-
-<sup>(1)</sup> You might need to turn off system-level battery restrictions for the app to receive messages when the app isn't open.
-
-### UnifiedPush
-
-[UnifiedPush](https://unifiedpush.org/) is an open standard for delivering push notifications, offering a privacy-friendly alternative to Google's proprietary FCM service. It allows users to choose their own notification distributor.
-
-> [!IMPORTANT]
-> To use UnifiedPush notifications, you need access to a [MollySocket](https://github.com/mollyim/mollysocket) server to link your Signal account to UnifiedPush. You can either run MollySocket on a server you control (strongly advised) or use a public instance.
-
-Currently, UnifiedPush is unavailable for linked devices.
-
-## Compatibility with Signal
-
-Molly and Signal apps can be installed on the same device. If you need a second number for messaging, you can register Molly with a different number while keeping Signal active. Any phone number capable of receiving SMS or calls can be used during registration.
-
-If you wish to use the same phone number for both Molly and Signal, you must register Molly as a linked device. Registering the same number independently on both apps will result in only the most recently registered app staying active, while the other will go offline.
-
-For Signal users looking to switch to Molly without changing the phone number, please refer to the [Migrating From Signal](https://github.com/mollyim/mollyim-android/wiki/Migrating-From-Signal) guide on the wiki.
-
-## Backups
-
-Backups are fully compatible. Signal [backups](https://support.signal.org/hc/en-us/articles/360007059752-Backup-and-Restore-Messages) can be restored in Molly, and the other way around, simply by choosing the backup folder and file. However, to import a backup from Signal, you must use a matching or newer version of Molly.
-
-## Feedback
-
-- [Submit bugs and feature requests](https://github.com/mollyim/mollyim-android/issues) on GitHub
-- Join us at [#mollyim:matrix.org](https://matrix.to/#/#mollyim:matrix.org) on Matrix (via space: [#mollyim-space:matrix.org](https://matrix.to/#/#mollyim-space:matrix.org))
-- For news, tips, and tricks, follow [@mollyim](https://fosstodon.org/@mollyim) on Mastodon
-
-## Reproducible Builds
-
-Molly supports reproducible builds, so that anyone can run the build process to reproduce the same APK as the original release.
-
-Please check the guide in the [reproducible-builds](https://github.com/mollyim/mollyim-android/blob/master/reproducible-builds) directory.
-
-## Changelog
-
-See the [Changelog](https://github.com/mollyim/mollyim-android/wiki/Changelog) to view recent changes.
+Issues and pull requests are welcome. Keep changes small, match the
+surrounding style, and say what you tested. Security problems go to the
+address in [SECURITY.md](SECURITY.md), not the tracker.
 
 ## License
 
-Licensed under the GNU Affero General Public License, version 3 only
-([`AGPL-3.0-only`](LICENSE)).
+AGPL-3.0-only, the same license as Signal and Molly. [LEGAL.md](LEGAL.md)
+covers copyright and trademarks. Wren is not affiliated with Signal
+Messenger, LLC, the Signal Foundation or the Molly project.
 
-See [LEGAL.md](LEGAL.md) for legal and copyright information.
+## Thanks
 
-## Acknowledgements
-
-Molly is an independent project built on code published by Signal. We are
-deeply grateful to the Signal contributors for the work we build on.
-
-Thanks to the following organizations for supporting the **Molly** project.
-
-<div align="center">
-<table>
-<tr>
-  <td>
-    <a href="https://nlnet.nl/" target="_blank">
-      <img src="https://nlnet.nl/logo/banner.svg" alt="NLnet logo" height="56" />
-    </a>
-  </td>
-  <td>
-    <a href="https://bahnhof.cloud/en/" target="_blank">
-      <img src="https://upload.wikimedia.org/wikipedia/de/c/c0/Bahnhof_AB_logo.svg" alt="Bahnhof logo" height="56" />
-    </a>
-  </td>
-  <td>
-    <a href="https://cloudsmith.com/blog/cloudsmith-loves-opensource/" target="_blank">
-      <img src="https://raw.githubusercontent.com/opswithranjan/CloudsmithLogo/main/CloudsmithLogoCropped.jpeg" alt="Cloudsmith logo" height="32" />
-    </a>
-  </td>
-  <td>
-    <a href="https://www.jetbrains.com/community/opensource/" target="_blank">
-      <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains logo" height="32" />
-    </a>
-  </td>
-</tr>
-</table>
-</div>
+Signal for the protocol, the app and the servers. Molly for years of
+hardening work that Wren stands on.

@@ -1,0 +1,11 @@
+# Changelog
+
+## Unreleased
+
+Forked from Molly v8.19.2-4 (Signal 8.19.2).
+
+- Duress passphrase: entering it at the lock screen erases all app data.
+- Wipe after 5, 10 or 20 failed unlock attempts.
+- PanicKit responder with a lock or wipe action and a connected trigger app.
+- Export a chat to HTML, plain text or JSON, with media.
+- Rebranded as Wren: package id io.github.munzzyy.wren, new icon.
