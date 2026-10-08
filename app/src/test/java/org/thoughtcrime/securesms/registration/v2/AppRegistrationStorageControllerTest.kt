@@ -6,6 +6,7 @@
 package org.thoughtcrime.securesms.registration.v2
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import assertk.assertThat
@@ -107,6 +108,10 @@ class AppRegistrationStorageControllerTest {
     coEvery { AppDependencies.jobManager.runJobBlocking(any(), any()) } returns null
 
     stubInMemoryBlobs()
+
+    // Molly encrypts TextSecurePreferences with the master secret, which unit tests do not have
+    mockkStatic(TextSecurePreferences::class)
+    every { TextSecurePreferences.getSharedPreferences(any()) } returns context.getSharedPreferences("test-secure-prefs", Context.MODE_PRIVATE)
 
     controller = AppRegistrationStorageController(context)
 

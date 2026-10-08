@@ -104,10 +104,12 @@ android {
 
   sourceSets {
     getByName("test") {
+      java.directories += "src/testShared"
       kotlin.directories += "src/testShared"
     }
 
     getByName("androidTest") {
+      java.directories += "src/testShared"
       kotlin.directories += "src/testShared"
     }
   }
