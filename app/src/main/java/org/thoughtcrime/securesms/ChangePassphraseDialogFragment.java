@@ -22,6 +22,8 @@ import androidx.fragment.app.DialogFragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import io.github.munzzyy.wren.duress.DuressManager;
+
 import org.signal.core.util.ServiceUtil;
 import org.signal.core.util.concurrent.SignalExecutors;
 import org.signal.core.util.logging.Log;
@@ -329,6 +331,8 @@ public class ChangePassphraseDialogFragment extends DialogFragment {
     private final char[]  newPassphrase;
     private final char[]  oldPassphrase;
 
+    private boolean matchesDuress;
+
     ChangeMasterSecretTask(char[] newPassphrase, char[] oldPassphrase) {
       this.context       = requireContext().getApplicationContext();
       this.newPassphrase = newPassphrase;
@@ -352,7 +356,9 @@ public class ChangePassphraseDialogFragment extends DialogFragment {
 
       MasterSecret masterSecret = null;
 
-      if (!MasterSecretUtil.isPassphraseInitialized(context)) {
+      if (mode != MODE_DISABLE && DuressManager.isDuressPassphrase(context, newPassphrase)) {
+        matchesDuress = true;
+      } else if (!MasterSecretUtil.isPassphraseInitialized(context)) {
         masterSecret = MasterSecretUtil.generateMasterSecret(context, newPassphrase);
       } else {
         try {
@@ -375,6 +381,10 @@ public class ChangePassphraseDialogFragment extends DialogFragment {
           listener.onMasterSecretChanged(masterSecret);
         }
         dismissAllowingStateLoss();
+      } else if (matchesDuress) {
+        showProgress(false);
+        setCancelable(true);
+        showPopup(R.string.ChangePassphraseDialogFragment__this_is_your_duress_passphrase);
       } else {
         showProgress(false);
         setCancelable(true);

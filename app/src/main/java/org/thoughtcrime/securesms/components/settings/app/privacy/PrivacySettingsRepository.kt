@@ -1,6 +1,9 @@
 package org.thoughtcrime.securesms.components.settings.app.privacy
 
 import android.content.Context
+import io.github.munzzyy.wren.duress.DuressManager
+import io.github.munzzyy.wren.duress.DuressStore
+import io.github.munzzyy.wren.duress.PanicAction
 import org.signal.core.util.concurrent.SignalExecutors
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
@@ -13,6 +16,39 @@ import org.thoughtcrime.securesms.util.TextSecurePreferences
 class PrivacySettingsRepository {
 
   private val context: Context = AppDependencies.application
+
+  private val duressStore = DuressStore(context)
+
+  val isDuressPassphraseEnabled: Boolean
+    get() = duressStore.duressEnabled
+
+  val failedAttemptLimit: Int
+    get() = duressStore.failedAttemptLimit
+
+  val panicAction: PanicAction
+    get() = duressStore.panicAction
+
+  val panicTriggerPackage: String?
+    get() = duressStore.panicTriggerPackage
+
+  fun setFailedAttemptLimit(limit: Int) {
+    duressStore.failedAttemptLimit = limit
+  }
+
+  fun setPanicAction(action: PanicAction) {
+    duressStore.panicAction = action
+  }
+
+  fun disconnectPanicTrigger() {
+    duressStore.disconnectPanicTrigger()
+  }
+
+  fun clearDuressPassphrase(onComplete: () -> Unit) {
+    SignalExecutors.BOUNDED.execute {
+      DuressManager.clearDuressPassphrase(context)
+      onComplete()
+    }
+  }
 
   fun getBlockedCount(consumer: (Int) -> Unit) {
     SignalExecutors.BOUNDED.execute {

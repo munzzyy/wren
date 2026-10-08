@@ -274,6 +274,14 @@ public class MasterSecretUtil {
     return retrieve(context, "keystore_initialized", false);
   }
 
+  public static String getKdfParameters(Context context) {
+    return retrieve(context, "kdf_parameters", "");
+  }
+
+  public static boolean hasStrongBoxKeyStore(Context context) {
+    return hasStrongBox(context);
+  }
+
   public static char[] getUnencryptedPassphrase() {
     return UNENCRYPTED_PASSPHRASE.clone();
   }
