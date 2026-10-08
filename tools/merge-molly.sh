@@ -24,6 +24,8 @@ if ! git remote get-url molly > /dev/null 2>&1; then
   git remote add molly "$MOLLY_URL"
 fi
 
+git config merge.ours.driver true
+git config merge.theirs.driver 'cp -- %B %A'
 git fetch --no-tags molly main
 target=$(git rev-parse --short=12 refs/remotes/molly/main)
 
