@@ -43,6 +43,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import io.github.munzzyy.wren.duress.DuressManager;
+
 import org.signal.core.util.ServiceUtil;
 import org.signal.core.util.ThreadUtil;
 import org.signal.core.util.logging.Log;
@@ -343,7 +345,11 @@ public class PassphrasePromptActivity extends PassphraseActivity {
       MasterSecret masterSecret = null;
       try {
         masterSecret = MasterSecretUtil.getMasterSecret(getApplicationContext(), passphrase);
-      } catch (InvalidPassphraseException | UnrecoverableKeyException e) {
+        DuressManager.onUnlocked(getApplicationContext());
+      } catch (InvalidPassphraseException e) {
+        Log.d(TAG, e);
+        DuressManager.onWrongPassphrase(getApplicationContext(), passphrase);
+      } catch (UnrecoverableKeyException e) {
         Log.d(TAG, e);
       }
 
