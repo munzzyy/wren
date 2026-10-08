@@ -93,9 +93,13 @@ iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
 Nothing to install yet. When the first release is out:
 
 - Download the APK from [Releases](https://github.com/munzzyy/wren/releases)
-  and check the SHA-256 sum.
+  and check the SHA-256 sum. Each release carries one file per CPU type
+  (`arm64-v8a` for almost every phone made since 2017, `armeabi-v7a` for old
+  32-bit phones, `x86_64` for emulators and some tablets) and a universal file
+  that holds all three. The per-CPU file is about 80 MB, the universal 124 MB.
 - Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
-  and let it track releases.
+  and let it track releases. Set its APK filter to `arm64-v8a` so it picks the
+  right file.
 - An F-Droid repository at `https://munzzyy.dev/wren/fdroid/` is planned;
   see [docs/FDROID-REPO.md](docs/FDROID-REPO.md).
 
@@ -152,6 +156,20 @@ whether to include media, pick a folder. Wren writes `chat.html` (or `.txt`,
 `.json`) and a `media/` folder next to it and shows a notification when it is
 done. The export is not encrypted. Disappearing messages are exported as they
 are at that moment. Details in [docs/EXPORT.md](docs/EXPORT.md).
+
+
+## Known gaps
+
+- Two small native libraries Wren inherits from Molly, the Argon2 passphrase
+  hasher and Molly's native utils, are built with 4 KB page alignment. Phones
+  that boot with 16 KB pages (some Android 15 and 16 devices) run them in a
+  compatibility mode. Every other native library in the app, including
+  libsignal, is 16 KB aligned. Rebuilding those two with a current NDK is on
+  the list; `tools/apk-report.sh` flags them until then.
+- The black theme, the device check and both wipes have unit tests and a
+  clean build behind them but have not been looked at on a real phone yet.
+- Wren is on Signal 8.19.2 (through Molly) while Signal ships 8.29.3. See
+  "Keeping up with Signal".
 
 ## Keeping up with Signal
 

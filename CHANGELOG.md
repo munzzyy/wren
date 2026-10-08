@@ -12,3 +12,4 @@ Forked from Molly v8.19.2-4 (Signal 8.19.2).
 - Pure black theme for OLED screens.
 - Check this device: security patch age, screen lock and privacy settings in one screen, with one-tap hardened defaults and a chat list warning when updates are six months stale.
 - Export all chats into one folder, and a Cancel button on every export notification.
+- Release builds ship one APK per CPU type plus a universal one, with native libraries stored uncompressed and 16 KB aligned where the upstream library allows; tools/apk-report.sh checks a built APK.
