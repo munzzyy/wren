@@ -1539,6 +1539,16 @@
             android:exported="false"
             android:theme="@style/TextSecure.DialogActivity" />
 
+        <receiver
+            android:name="io.github.munzzyy.wren.guard.InactivityWipeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name="io.github.munzzyy.wren.duress.PanicResponderActivity"
             android:excludeFromRecents="true"

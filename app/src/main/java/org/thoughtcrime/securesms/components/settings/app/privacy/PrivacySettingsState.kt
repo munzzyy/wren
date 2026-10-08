@@ -14,6 +14,7 @@ data class PrivacySettingsState(
   val failedAttemptLimit: Int,
   val panicAction: PanicAction,
   val panicTriggerPackage: String?,
+  val inactivityWipeDays: Int,
   val biometricScreenLock: Boolean,
   val screenSecurity: Boolean,
   val incognitoKeyboard: Boolean,

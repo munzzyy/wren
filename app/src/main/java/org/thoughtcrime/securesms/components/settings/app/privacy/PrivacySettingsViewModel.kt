@@ -50,6 +50,7 @@ class PrivacySettingsViewModel(
   fun setPassphraseLockEnabled(enabled: Boolean) {
     TextSecurePreferences.setPassphraseLockEnabled(application, enabled)
     if (!enabled) {
+      repository.turnOffLockDependents()
       repository.clearDuressPassphrase { refresh() }
     }
     refresh()
@@ -67,6 +68,11 @@ class PrivacySettingsViewModel(
 
   fun setFailedAttemptLimit(limit: Int) {
     repository.setFailedAttemptLimit(limit)
+    refresh()
+  }
+
+  fun setInactivityWipeDays(days: Int) {
+    repository.setInactivityWipeDays(days)
     refresh()
   }
 
@@ -114,6 +120,7 @@ class PrivacySettingsViewModel(
       failedAttemptLimit = repository.failedAttemptLimit,
       panicAction = repository.panicAction,
       panicTriggerPackage = repository.panicTriggerPackage,
+      inactivityWipeDays = repository.inactivityWipeDays,
       biometricScreenLock = TextSecurePreferences.isBiometricScreenLockEnabled(application),
       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(application),
       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(application),

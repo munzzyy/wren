@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 
+import io.github.munzzyy.wren.guard.InactivityWipe;
 import io.github.munzzyy.wren.theme.BlackTheme;
 
 import net.zetetic.database.Logger;
@@ -198,6 +199,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
 
     initializePassphraseLock();
     cleanCacheDir();
+    InactivityWipe.checkInBackground(this);
   }
 
   private void onCreateUnlock() {

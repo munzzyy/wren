@@ -20,6 +20,7 @@ import io.github.munzzyy.wren.devicecheck.DeviceCheckActivity
 import io.github.munzzyy.wren.duress.DuressPassphraseDialogFragment
 import io.github.munzzyy.wren.duress.FailedAttemptPolicy
 import io.github.munzzyy.wren.duress.PanicAction
+import io.github.munzzyy.wren.guard.InactivityWipePolicy
 import io.github.munzzyy.wren.guard.Reauth
 import org.signal.core.ui.util.ThemeUtil
 import org.signal.core.util.logging.Log
@@ -63,6 +64,16 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         getString(R.string.PrivacySettingsFragment__off)
       } else {
         resources.getQuantityString(R.plurals.PrivacySettingsFragment__d_failed_attempts, limit, limit)
+      }
+    }.toTypedArray()
+  }
+
+  private val inactivityWipeLabels by lazy {
+    InactivityWipePolicy.ALLOWED_DAYS.map { days ->
+      if (days == InactivityWipePolicy.OFF) {
+        getString(R.string.PrivacySettingsFragment__off)
+      } else {
+        resources.getQuantityString(R.plurals.PrivacySettingsFragment__d_days, days, days)
       }
     }.toTypedArray()
   }
@@ -249,6 +260,23 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
 
       textPref(
         summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__wipe_after_failed_unlock_attempts_summary)
+      )
+
+      radioListPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__erase_if_not_unlocked),
+        listItems = inactivityWipeLabels,
+        selected = InactivityWipePolicy.ALLOWED_DAYS.indexOf(state.inactivityWipeDays),
+        isEnabled = state.passphraseLock,
+        confirmAction = true,
+        onSelected = {
+          InactivityWipePolicy.ALLOWED_DAYS.getOrNull(it)?.takeIf { days -> days != state.inactivityWipeDays }?.let { days ->
+            Reauth.require(this@PrivacySettingsFragment) { viewModel.setInactivityWipeDays(days) }
+          }
+        }
+      )
+
+      textPref(
+        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__erase_if_not_unlocked_summary)
       )
 
       dividerPref()

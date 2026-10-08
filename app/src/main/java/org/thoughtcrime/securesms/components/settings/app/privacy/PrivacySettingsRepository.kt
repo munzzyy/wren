@@ -4,6 +4,8 @@ import android.content.Context
 import io.github.munzzyy.wren.duress.DuressManager
 import io.github.munzzyy.wren.duress.DuressStore
 import io.github.munzzyy.wren.duress.PanicAction
+import io.github.munzzyy.wren.guard.InactivityWipe
+import io.github.munzzyy.wren.guard.InactivityWipePolicy
 import org.signal.core.util.concurrent.SignalExecutors
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
@@ -30,6 +32,18 @@ class PrivacySettingsRepository {
 
   val panicTriggerPackage: String?
     get() = duressStore.panicTriggerPackage
+
+  val inactivityWipeDays: Int
+    get() = duressStore.inactivityWipeDays
+
+  fun setInactivityWipeDays(days: Int) {
+    duressStore.setInactivityWipe(days, System.currentTimeMillis())
+    InactivityWipe.checkInBackground(context)
+  }
+
+  fun turnOffLockDependents() {
+    setInactivityWipeDays(InactivityWipePolicy.OFF)
+  }
 
   fun setFailedAttemptLimit(limit: Int) {
     duressStore.failedAttemptLimit = limit

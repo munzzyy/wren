@@ -4,6 +4,7 @@ package io.github.munzzyy.wren.duress
 
 import android.content.Context
 import android.content.SharedPreferences
+import io.github.munzzyy.wren.guard.InactivityWipePolicy
 import org.signal.core.util.Base64
 import java.io.IOException
 
@@ -21,6 +22,8 @@ class DuressStore(context: Context) {
     private const val FAILED_ATTEMPT_COUNT = "failed_attempt_count"
     private const val PANIC_ACTION = "panic_action"
     private const val PANIC_TRIGGER_PACKAGE = "panic_trigger_package"
+    private const val INACTIVITY_WIPE_DAYS = "inactivity_wipe_days"
+    private const val LAST_UNLOCK_AT = "last_unlock_at"
   }
 
   private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -108,6 +111,27 @@ class DuressStore(context: Context) {
         .putString(PANIC_ACTION, PanicAction.LOCK.key)
     )
   }
+
+  val inactivityWipeDays: Int
+    get() = InactivityWipePolicy.sanitizeDays(prefs.getInt(INACTIVITY_WIPE_DAYS, InactivityWipePolicy.OFF))
+
+  /** Every change restarts the countdown, and turning it off forgets when Wren was last unlocked. */
+  fun setInactivityWipe(days: Int, nowMillis: Long) {
+    val sanitized = InactivityWipePolicy.sanitizeDays(days)
+    val editor = prefs.edit().putInt(INACTIVITY_WIPE_DAYS, sanitized)
+    if (sanitized == InactivityWipePolicy.OFF) {
+      editor.remove(LAST_UNLOCK_AT)
+    } else {
+      editor.putLong(LAST_UNLOCK_AT, nowMillis)
+    }
+    commit(editor)
+  }
+
+  var lastUnlockAt: Long
+    get() = prefs.getLong(LAST_UNLOCK_AT, 0L)
+    set(value) {
+      commit(prefs.edit().putLong(LAST_UNLOCK_AT, value))
+    }
 
   private fun getBytes(key: String): ByteArray? {
     val encoded = prefs.getString(key, null) ?: return null
