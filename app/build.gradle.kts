@@ -36,6 +36,9 @@ val selectableVariants = listOf(
   "stagingWebsiteRelease",
 )
 
+// Splits conflict with ndk.abiFilters, so they only apply when a release is requested.
+val splitAbis = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+
 // Override build config via env vars when project property 'CI' is set
 val ciEnabled = project.hasProperty("CI")
 
@@ -119,10 +122,12 @@ android {
     jniLibs {
       excludes += setOf(
         "**/*.dylib",
-        "**/*.dll"
+        "**/*.dll",
+        // the universal APK would otherwise ship 32-bit x86 libraries without libsignal_jni
+        "**/x86/*.so"
       )
-      // MOLLY: Compress native libs by default as APK is not split on ABIs
-      useLegacyPackaging = true
+      // Stored libs are mapped from the APK, 16 KB aligned, and need no second copy on disk.
+      useLegacyPackaging = false
     }
     resources {
       excludes += setOf(
@@ -139,6 +144,18 @@ android {
         "**/*.dll",
         "**/*.proto"
       )
+    }
+  }
+
+  if (splitAbis) {
+    splits {
+      // No per-ABI versionCode offsets: these ship on GitHub and Obtainium, not Play.
+      abi {
+        isEnable = true
+        reset()
+        include("arm64-v8a", "armeabi-v7a", "x86_64")
+        isUniversalApk = true
+      }
     }
   }
 
@@ -219,9 +236,11 @@ android {
     buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
     buildConfigField("boolean", "TRACING_ENABLED", "false")
 
-    ndk {
-      //noinspection ChromeOsAbiSupport
-      abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+    if (!splitAbis) {
+      ndk {
+        //noinspection ChromeOsAbiSupport
+        abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+      }
     }
 
     testInstrumentationRunner = "org.thoughtcrime.securesms.testing.SignalTestRunner"
