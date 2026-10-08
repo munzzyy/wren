@@ -29,6 +29,14 @@ Export any chat. One chat, as HTML you can open in a browser, plain text, or
 JSON, with the photos, voice notes and files next to it. Signal only offers a
 full backup in its own format.
 
+A pure black theme. Dark theme with true black backgrounds for OLED screens,
+asked for on Molly's tracker for years. Settings, Appearance, Theme, Black.
+
+A device check. One screen that reads your phone's security patch date, your
+screen lock, and every privacy setting that matters, says which ones are weak,
+and fixes the ones Wren controls with one tap. The chat list warns you when
+the phone's security updates stopped six months ago.
+
 ## Status
 
 Wren is new. There is no release yet and no signing certificate to verify
@@ -54,6 +62,9 @@ sums and the signing fingerprint written here the same day.
 | Wipe after N failed unlocks | no | no | yes |
 | PanicKit responder | lock only | lock only | lock or wipe |
 | Export one chat to HTML, text or JSON | no | no | yes |
+| Pure black OLED theme | no | no | yes |
+| Device check with one-tap hardened defaults | no | no | yes |
+| Warning when the phone's security updates are stale | no | no | yes |
 
 Everything else Signal does, Wren does, because it is Signal underneath.
 
@@ -129,6 +140,7 @@ What a wipe does not do:
 - It does nothing if the phone was copied before the wipe.
 
 [docs/DURESS.md](docs/DURESS.md) has the full threat model.
+[docs/DEVICE-CHECK.md](docs/DEVICE-CHECK.md) covers the device check and the black theme.
 
 ## Chat export
 
