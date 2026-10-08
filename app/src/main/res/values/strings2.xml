@@ -154,6 +154,11 @@
     <string name="PanicConnectActivity__s_s_wants_to_connect">%1$s (%2$s) wants to be Wren\'s panic trigger. It will be able to lock Wren at any time. Erasing stays off until you choose it in Wren\'s privacy settings.</string>
     <string name="PanicConnectActivity__allow">Allow</string>
     <string name="PanicConnectActivity__deny">Deny</string>
+    <string name="DeviceCheck__route_through_orbot">Route through Orbot</string>
+    <string name="DeviceCheck__orbot_on">On. Wren connects through Tor</string>
+    <string name="DeviceCheck__orbot_off">Off. Your network can see that you use Signal</string>
+    <string name="DeviceCheck__route_through_orbot_title">Route Wren through Orbot?</string>
+    <string name="DeviceCheck__route_through_orbot_message">Wren will connect only through Tor, using Orbot. While Orbot is stopped, Wren can\'t send or receive messages. You can change this later in Wren\'s network settings.</string>
     <string name="PassphraseCreateActivity_now_you_can_set_a_passphrase_to_encrypt_the_database">Now you can set a passphrase to encrypt the database. Until it\'s unlocked, Wren cannot receive notifications or calls. This helps protect data on lost or stolen devices.</string>
     <string name="PassphraseCreateActivity_require_passphrase_to_unlock_molly">Require passphrase to unlock Wren?</string>
     <string name="PassphraseCreateActivity_turn_on_database_encryption">Turn on database encryption</string>

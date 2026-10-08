@@ -23,7 +23,8 @@ enum class CheckId {
   LINK_PREVIEWS,
   READ_RECEIPTS,
   TYPING_INDICATORS,
-  BLOCK_UNKNOWN
+  BLOCK_UNKNOWN,
+  ORBOT
 }
 
 data class DeviceSnapshot(
@@ -41,7 +42,9 @@ data class DeviceSnapshot(
   val readReceipts: Boolean,
   val typingIndicators: Boolean,
   val blockUnknown: Boolean,
-  val isPrimaryDevice: Boolean
+  val isPrimaryDevice: Boolean,
+  val orbotInstalled: Boolean = false,
+  val routedThroughOrbot: Boolean = false
 )
 
 data class CheckResult(val id: CheckId, val status: CheckStatus)
@@ -55,7 +58,9 @@ object DeviceChecks {
   const val NOTIFICATIONS_SHOW_NOTHING = "none"
 
   fun evaluate(snapshot: DeviceSnapshot, today: LocalDate): List<CheckResult> {
-    return CheckId.entries.map { id -> CheckResult(id, statusOf(id, snapshot, today)) }
+    return CheckId.entries
+      .filter { it != CheckId.ORBOT || snapshot.orbotInstalled }
+      .map { id -> CheckResult(id, statusOf(id, snapshot, today)) }
   }
 
   fun countGood(results: List<CheckResult>): Int = results.count { it.status == CheckStatus.GOOD }
@@ -74,7 +79,8 @@ object DeviceChecks {
       CheckId.LINK_PREVIEWS,
       CheckId.READ_RECEIPTS,
       CheckId.TYPING_INDICATORS,
-      CheckId.BLOCK_UNKNOWN -> warnUnless(HardenedSetting.forCheck(id)!!.isHardened(snapshot))
+      CheckId.BLOCK_UNKNOWN,
+      CheckId.ORBOT -> warnUnless(HardenedSetting.forCheck(id)!!.isHardened(snapshot))
     }
   }
 

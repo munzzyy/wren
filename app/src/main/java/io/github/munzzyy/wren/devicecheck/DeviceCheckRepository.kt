@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.WorkerThread
 import io.github.munzzyy.wren.duress.DuressStore
+import io.github.munzzyy.wren.guard.OrbotRouting
 import org.signal.core.util.ServiceUtil
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
@@ -36,7 +37,9 @@ class DeviceCheckRepository(context: Context) {
       readReceipts = TextSecurePreferences.isReadReceiptsEnabled(context),
       typingIndicators = TextSecurePreferences.isTypingIndicatorsEnabled(context),
       blockUnknown = TextSecurePreferences.isBlockUnknownEnabled(context),
-      isPrimaryDevice = SignalStore.account.isPrimaryDevice
+      isPrimaryDevice = SignalStore.account.isPrimaryDevice,
+      orbotInstalled = OrbotRouting.isInstalled(context),
+      routedThroughOrbot = OrbotRouting.isSelected(context)
     )
   }
 
@@ -63,6 +66,7 @@ class DeviceCheckRepository(context: Context) {
       HardenedSetting.READ_RECEIPTS -> if (SignalStore.account.isPrimaryDevice) TextSecurePreferences.setReadReceiptsEnabled(context, !hardened)
       HardenedSetting.TYPING_INDICATORS -> if (SignalStore.account.isPrimaryDevice) TextSecurePreferences.setTypingIndicatorsEnabled(context, !hardened)
       HardenedSetting.BLOCK_UNKNOWN -> TextSecurePreferences.setBlockUnknownEnabled(context, hardened)
+      HardenedSetting.ORBOT -> if (hardened) OrbotRouting.select(context)
     }
   }
 

@@ -17,7 +17,20 @@ class HardeningPlanTest {
 
   @Test
   fun `a stock install gets all seven changes in display order`() {
-    assertEquals(HardenedSetting.entries.toList(), HardeningPlan.changesFor(DeviceSnapshots.stock))
+    assertEquals(HardenedSetting.entries.toList() - HardenedSetting.ORBOT, HardeningPlan.changesFor(DeviceSnapshots.stock))
+  }
+
+  @Test
+  fun `Orbot is never part of the bulk plan`() {
+    assertFalse(HardenedSetting.ORBOT in HardeningPlan.changesFor(DeviceSnapshots.stock))
+    assertFalse(HardenedSetting.ORBOT in HardeningPlan.changesFor(DeviceSnapshots.stock.copy(orbotInstalled = false)))
+  }
+
+  @Test
+  fun `Orbot can only be chosen when it is installed`() {
+    assertTrue(HardenedSetting.ORBOT.canChange(DeviceSnapshots.stock))
+    assertFalse(HardenedSetting.ORBOT.canChange(DeviceSnapshots.stock.copy(orbotInstalled = false)))
+    assertFalse(HardenedSetting.ORBOT.canChange(DeviceSnapshots.hardened.copy(orbotInstalled = false, isPrimaryDevice = false)))
   }
 
   @Test
