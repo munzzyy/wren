@@ -1,6 +1,6 @@
 services:
   assemble:
-    image: reproducible-molly
+    image: reproducible-wren
     build:
       context: ..
     command: assemble

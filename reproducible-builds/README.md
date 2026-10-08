@@ -1,8 +1,8 @@
 # Reproducible Builds
 
-[![Reproducible build](https://github.com/mollyim/mollyim-android/actions/workflows/reprocheck.yml/badge.svg)](https://github.com/mollyim/mollyim-android/actions/workflows/reprocheck.yml)
+[![Reproducible build](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml/badge.svg)](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml)
 
-Follow these instructions to verify that this source code is exactly the same code that was used to compile the APK distributed on the website.
+Follow these instructions to check that the source code is exactly what was used to compile the APK I distribute.
 
 The [reproducible-builds.org](https://reproducible-builds.org/) project has more information about this general topic.
 
@@ -12,39 +12,55 @@ The [reproducible-builds.org](https://reproducible-builds.org/) project has more
 - Docker Compose
 - Python 3
 
+## Release assets
+
+Each release has two builds, and each comes signed or unsigned depending on whether the release key was available to the build:
+
+| Build | Signed | Unsigned |
+|-------|--------|----------|
+| `prodStore`, no in-app updater (GitHub, Obtainium) | `Wren-<version>.apk` | `Wren-unsigned-<version>.apk` |
+| `prodWebsite`, with in-app updater | `Wren-website-<version>.apk` | `Wren-website-unsigned-<version>.apk` |
+
+`SHA256SUMS` lists the checksum of every APK in the release.
+
 ## Build and Verify
 
-You can compile you own release of Molly inside a Docker container and compare the resulted APK to the APK that is officially distributed. To do so, execute the following:
+You can compile your own release of Wren inside a Docker container and compare the result to the APK I publish. To do so, run:
 
 ```shell
 # Set the release version you want to check
-export VERSION=v5.42.8-2
+export VERSION=v1.0.0
 
 # Clone the source code repository
-git clone https://github.com/mollyim/mollyim-android.git
+git clone https://github.com/munzzyy/wren.git
 
 # Go to this directory
-cd mollyim-android/reproducible-builds
+cd wren/reproducible-builds
 
 # Check out the release tag
 git checkout $VERSION
 
 # The following steps might be different for the chosen version.
-# Before proceeding, you should open this tutorial (README.md file) and review the instructions.
+# Before proceeding, review the instructions in this README at that tag.
 
 # Build the APK using the Docker environment
 docker compose up --build
 
 # Download the official APK
-wget https://github.com/mollyim/mollyim-android/releases/download/$VERSION/Molly-$VERSION.apk
+wget https://github.com/munzzyy/wren/releases/download/$VERSION/Wren-$VERSION.apk
+
+# Name your build the same way the release does
+./name-outputs.sh $VERSION built
 
 # Run the diff script to compare the APKs
-python apkdiff/apkdiff.py Molly-$VERSION.apk outputs/apk/prodWebsite/release/Molly-unsigned-$VERSION.apk
+python apkdiff/apkdiff.py Wren-$VERSION.apk built/Wren-unsigned-$VERSION.apk
 
 # Clean up the Docker environment
 docker compose down
 ```
 
-If you get `APKs match`, you have **successfully verified** that the official release matches with your own self-built version of Molly. Congratulations!
+To check the in-app updater build, use `Wren-website-$VERSION.apk` and `built/Wren-website-unsigned-$VERSION.apk` instead.
 
-If you get `APKs don't match`, please [report the issue](https://github.com/mollyim/mollyim-android/issues).
+If you get `APKs match`, you have **successfully verified** that the official release matches your own self-built version of Wren.
+
+If you get `APKs don't match`, please [report the issue](https://github.com/munzzyy/wren/issues).
