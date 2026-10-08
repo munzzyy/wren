@@ -37,7 +37,7 @@ val selectableVariants = listOf(
 )
 
 // Splits conflict with ndk.abiFilters, so they only apply when a release is requested.
-val splitAbis = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+val splitAbis = gradle.startParameter.taskNames.let { names -> names.any { it.contains("release", ignoreCase = true) } && names.none { it.contains("bundle", ignoreCase = true) } }
 
 // Override build config via env vars when project property 'CI' is set
 val ciEnabled = project.hasProperty("CI")
