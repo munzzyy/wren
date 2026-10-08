@@ -55,6 +55,25 @@ sums and the signing fingerprint written here the same day.
 
 Everything else Signal does, Wren does, because it is Signal underneath.
 
+## Wren on other devices
+
+Wren is a family. Everything talks to Signal's servers, so any Wren, Molly or
+Signal app can message any other, and a desktop or tablet links to your phone
+the same way Signal Desktop does.
+
+Android, this repository. The phone app, built from Molly.
+Desktop, [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
+  built from Signal Desktop for Linux, Windows and macOS. Signal Desktop has no
+  app lock at all; Wren Desktop gets a passphrase lock with a duress passphrase,
+  wipe after failed attempts, auto-lock, and the same chat export.
+iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
+  Signal iOS. Honest status: without an Apple developer account there is no
+  App Store, no TestFlight and no push notifications, because Apple ties
+  pushes to Signal's own bundle id. It builds, it can be sideloaded for seven
+  days at a time with a free Apple ID, and it only receives messages while
+  open. That repository explains the limits and what changes the day an
+  account exists.
+
 ## Install
 
 Nothing to install yet. When the first release is out:
