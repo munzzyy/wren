@@ -168,20 +168,29 @@ are at that moment. Details in [docs/EXPORT.md](docs/EXPORT.md).
   the list; `tools/apk-report.sh` flags them until then.
 - The black theme, the device check and both wipes have unit tests and a
   clean build behind them but have not been looked at on a real phone yet.
-- Wren is on Signal 8.19.2 (through Molly) while Signal ships 8.29.3. See
-  "Keeping up with Signal".
+- Wren is on Signal 8.20.5 while Signal ships 8.29.4, for the reason given
+  under "Keeping up with Signal".
 
 ## Keeping up with Signal
 
 Signal clients stop working about 90 days after they were built. A fork that
-falls behind dies. Wren merges Molly, and Molly merges Signal, so Wren is
-only as current as Molly is. Right now that is Signal 8.19.2 while Signal
-ships 8.29.3, and merging Signal directly into Wren is the first job after
-this release.
+falls behind dies. Wren started from Molly, which was on Signal 8.19.2; I
+merged Signal 8.20.5 on top myself (every conflict and decision is in
+[docs/SIGNAL-MERGE-LOG.md](docs/SIGNAL-MERGE-LOG.md)), so Wren is one step
+ahead of Molly while Signal ships 8.29.4.
+
+The rest of the gap has one cause, and it is the same one that holds Molly
+back: Signal 8.21 and later need newer builds of two native libraries,
+libsignal and RingRTC. Molly ships its own hardened forks of both (they keep
+calls and all traffic inside your proxy, with no direct fallback), and the
+newest forks Molly has published are the ones 8.20 needs. Getting past 8.20
+means either rebuilding those forks for the newer versions, or using Signal's
+own builds and giving up the call proxy. I am not making that trade quietly;
+it is written here so you can see it.
 
 A daily workflow fetches both upstreams and opens an issue the moment Molly
 moves, with the exact commit range and the version gap, so the lag is always
-public. `tools/merge-molly.sh` does the merge and reruns the rebrand.
+public. `tools/merge-molly.sh` does a Molly merge and reruns the rebrand.
 
 ## Build it yourself
 

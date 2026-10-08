@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Forked from Molly v8.19.2-4 (Signal 8.19.2).
+Forked from Molly v8.19.2-4 (Signal 8.19.2), then merged up to Signal 8.20.5 (see docs/SIGNAL-MERGE-LOG.md).
 
 - Duress passphrase: entering it at the lock screen erases all app data.
 - Wipe after 5, 10 or 20 failed unlock attempts.
