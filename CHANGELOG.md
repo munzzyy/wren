@@ -11,3 +11,4 @@ Forked from Molly v8.19.2-4 (Signal 8.19.2).
 - Rebranded as Wren: package id io.github.munzzyy.wren, new icon.
 - Pure black theme for OLED screens.
 - Check this device: security patch age, screen lock and privacy settings in one screen, with one-tap hardened defaults and a chat list warning when updates are six months stale.
+- Export all chats into one folder, and a Cancel button on every export notification.

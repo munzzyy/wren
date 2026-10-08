@@ -62,6 +62,7 @@ sums and the signing fingerprint written here the same day.
 | Wipe after N failed unlocks | no | no | yes |
 | PanicKit responder | lock only | lock only | lock or wipe |
 | Export one chat to HTML, text or JSON | no | no | yes |
+| Export all chats at once | no | no | yes |
 | Pure black OLED theme | no | no | yes |
 | Device check with one-tap hardened defaults | no | no | yes |
 | Warning when the phone's security updates are stale | no | no | yes |
@@ -144,7 +145,9 @@ What a wipe does not do:
 
 ## Chat export
 
-Open a chat, tap the name, Export chat. Pick HTML, text or JSON, choose
+Open a chat, tap the name, Export chat. Or Settings, Chats, Export all chats,
+which writes one folder per chat and shows how many were written when it is
+done. Every export notification has a Cancel button. Pick HTML, text or JSON, choose
 whether to include media, pick a folder. Wren writes `chat.html` (or `.txt`,
 `.json`) and a `media/` folder next to it and shows a notification when it is
 done. The export is not encrypted. Disappearing messages are exported as they
