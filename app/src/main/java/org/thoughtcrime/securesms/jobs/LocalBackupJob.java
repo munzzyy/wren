@@ -13,6 +13,7 @@ import org.signal.core.ui.permissions.Permissions;
 import org.signal.core.ui.util.StorageUtil;
 import org.signal.core.util.NoExternalStorageException;
 import org.signal.core.util.Stopwatch;
+import org.signal.core.util.UnableToStartException;
 import org.signal.core.util.crypto.AttachmentSecretProvider;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.R;
