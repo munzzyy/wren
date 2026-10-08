@@ -4,6 +4,8 @@ import android.app.Application;
 
 import androidx.annotation.NonNull;
 
+import io.github.munzzyy.wren.export.ChatExportJob;
+
 import org.thoughtcrime.securesms.database.SignalDatabase;
 import org.thoughtcrime.securesms.jobmanager.Constraint;
 import org.thoughtcrime.securesms.jobmanager.ConstraintObserver;
@@ -157,6 +159,7 @@ public final class JobManagerFactories {
       put("CallQualitySurveySubmission",               new FailingJob.Factory()); // MOLLY
       put(CallSyncEventJob.KEY,                        new CallSyncEventJob.Factory());
       put(CancelRestoreMediaJob.KEY,                   new CancelRestoreMediaJob.Factory());
+      put(ChatExportJob.KEY,                           new ChatExportJob.Factory());
       put(CheckKeyTransparencyJob.KEY,                 new CheckKeyTransparencyJob.Factory());
       put(CheckRestoreMediaLeftJob.KEY,                new CheckRestoreMediaLeftJob.Factory());
       put(CheckServiceReachabilityJob.KEY,             new CheckServiceReachabilityJob.Factory());
