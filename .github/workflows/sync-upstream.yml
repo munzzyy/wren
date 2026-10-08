@@ -1,0 +1,138 @@
+name: Sync Upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions: {}
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  MOLLY_URL: https://github.com/mollyim/mollyim-android.git
+  SIGNAL_URL: https://github.com/signalapp/Signal-Android.git
+  GIT_LFS_SKIP_SMUDGE: 1
+
+jobs:
+  sync:
+    name: Sync branches
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # to push molly-main and upstream-stable when SYNC_PAT is not set
+    outputs:
+      molly_sha: ${{ steps.range.outputs.molly_sha }}
+      pending: ${{ steps.range.outputs.pending }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch Molly and Signal
+        run: |
+          git remote add molly "$MOLLY_URL"
+          git remote add signal "$SIGNAL_URL"
+          git fetch --no-tags molly main
+          git fetch --no-tags signal main
+          curl -fsSL -o "$RUNNER_TEMP/latest.json" https://updates.signal.org/android/latest.json
+          echo "STABLE_TAG=v$(jq -r .versionName "$RUNNER_TEMP/latest.json")" >> "$GITHUB_ENV"
+
+      - name: Update molly-main
+        run: |
+          gh auth setup-git
+          git push --force origin refs/remotes/molly/main:refs/heads/molly-main
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Update upstream-stable
+        run: |
+          if ! git fetch --no-tags signal "refs/tags/${STABLE_TAG}:refs/tags/${STABLE_TAG}"; then
+            echo "::notice::tag ${STABLE_TAG} is not on signal yet, skipping"
+            exit 0
+          fi
+          gh auth setup-git
+          git push --force origin "${STABLE_TAG}^{commit}:refs/heads/upstream-stable"
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Work out the merge range
+        id: range
+        run: |
+          base=$(git merge-base origin/main refs/remotes/molly/main)
+          head=$(git rev-parse refs/remotes/molly/main)
+          count=$(git rev-list --count "$base..$head")
+          molly_signal=$(git show "$head:app/build.gradle.kts" | sed -n 's/^val canonicalVersionName = "\(.*\)"/\1/p')
+          wren_signal=$(git show origin/main:app/build.gradle.kts | sed -n 's/^val canonicalVersionName = "\(.*\)"/\1/p')
+          {
+            echo "molly_sha=${head::12}"
+            echo "pending=$count"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "Molly main is at \`${head::12}\`, built on Signal ${molly_signal:-unknown}."
+            echo "Wren main is on Signal ${wren_signal:-unknown}. Signal stable is ${STABLE_TAG#v}."
+            echo
+            if [ "$count" -eq 0 ]; then
+              echo "Wren main already contains everything on Molly main."
+            else
+              echo "Molly main is $count commit(s) ahead of the merge base \`${base::12}\`:"
+              echo
+              echo '```'
+              git log --format='%h %s' "$base..$head" | head -n 50 | tr -d '`'
+              echo '```'
+              if [ "$count" -gt 50 ]; then
+                echo
+                echo "Showing the newest 50 of $count."
+              fi
+              echo
+              echo "Range: https://github.com/mollyim/mollyim-android/compare/${base}...${head}"
+              echo
+              echo 'To merge: run `tools/merge-molly.sh` on a clean checkout of main.'
+            fi
+          } | tee "$RUNNER_TEMP/issue-body.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Share the issue text
+        uses: actions/upload-artifact@v7
+        with:
+          name: issue-body
+          path: ${{ runner.temp }}/issue-body.md
+          if-no-files-found: error
+
+  track:
+    name: Tracking issue
+    runs-on: ubuntu-24.04
+    needs: sync
+    permissions:
+      issues: write # to open, update or close the tracking issue
+
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      LABEL: upstream-merge
+      PENDING: ${{ needs.sync.outputs.pending }}
+      MOLLY_SHA: ${{ needs.sync.outputs.molly_sha }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: issue-body
+
+      - name: Open, update or close the issue
+        run: |
+          gh label create "$LABEL" --color 1d76db --description "Molly has commits Wren has not merged" --force
+          number=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ "$PENDING" -eq 0 ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "Wren main has caught up with Molly main."
+            fi
+            exit 0
+          fi
+          title="Merge Molly $MOLLY_SHA"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --title "$title" --body-file issue-body.md
+          else
+            gh issue create --title "$title" --body-file issue-body.md --label "$LABEL"
+          fi
