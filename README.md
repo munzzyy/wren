@@ -37,6 +37,26 @@ screen lock, and every privacy setting that matters, says which ones are weak,
 and fixes the ones Wren controls with one tap. The chat list warns you when
 the phone's security updates stopped six months ago.
 
+A panic button that asks first. When a PanicKit trigger app such as Ripple
+connects, Wren shows which app it is and asks before it can control anything.
+A newly connected trigger can only lock; you choose erase yourself.
+
+Your passphrase again before anything risky. Exporting, turning the lock off,
+changing the duress passphrase or the panic action all ask for the passphrase
+when the lock is on, and a wrong answer here counts like a wrong unlock.
+
+Erase if nobody unlocks it. Opt in, and if Wren is not unlocked for 3, 7, 14
+or 30 days it erases itself. Lock when a USB data connection starts, opt in,
+for phones that get plugged into a computer they do not trust.
+
+Encrypted export. Any export can be one `.wrenx` file locked with a
+passphrase instead of a plain folder. The format is scrypt plus AES-256-GCM,
+documented in [docs/EXPORT.md](docs/EXPORT.md), and
+`tools/wren-export-decrypt.py` opens it on a computer.
+
+Route through Orbot from the device check, when Orbot is installed, using
+Molly's own proxy code that refuses to connect any other way.
+
 ## Status
 
 Wren is new. There is no release yet and no signing certificate to verify
@@ -66,6 +86,11 @@ sums and the signing fingerprint written here the same day.
 | Pure black OLED theme | no | no | yes |
 | Device check with one-tap hardened defaults | no | no | yes |
 | Warning when the phone's security updates are stale | no | no | yes |
+| Confirmation before a panic trigger app connects | no | no | yes |
+| Passphrase again before exports and lock changes | no | no | yes |
+| Erase after N days without an unlock, lock on USB data | no | no | yes |
+| Encrypted export (.wrenx) | no | no | yes |
+| Google-free by default, with a check script | no | no (since Molly unified its flavors) | yes |
 
 Everything else Signal does, Wren does, because it is Signal underneath.
 
@@ -147,6 +172,9 @@ What a wipe does not do:
 
 [docs/DURESS.md](docs/DURESS.md) has the full threat model.
 [docs/DEVICE-CHECK.md](docs/DEVICE-CHECK.md) covers the device check and the black theme.
+[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md) is the whole-app threat model,
+[docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md) maps every protection to its code,
+and [docs/PANIC.md](docs/PANIC.md) covers connecting a trigger app.
 
 ## Chat export
 
@@ -227,12 +255,22 @@ fork is how you get there. Fixes that belong upstream go upstream.
 Can I run Wren next to Signal or Molly? Yes, with a different number, or
 as a linked device of the same account.
 
-Which version should I install? There is one build. It does not need Google
-Play services and has no Google analytics or tracking; the Firebase client
-stubs Molly carries are present and unused without Play services. Push notifications come over a WebSocket or UnifiedPush.
+Which version should I install? There is one build, and it contains no
+Firebase or Play Services code at all; `tools/apk-report.sh` proves it on any
+APK, and [docs/FOSS.md](docs/FOSS.md) explains what changed from Molly. A
+build with Google's push service exists for people who want it
+(`-PwrenFcm=true`). Push notifications come over a WebSocket or UnifiedPush.
 
 Where is the desktop app? In [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
 see "Wren on other devices". Plain Signal Desktop links to a Wren account too.
+
+## For reviewers
+
+If you review privacy software for a living, start with
+[docs/THREAT-MODEL.md](docs/THREAT-MODEL.md) and
+[docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md). They say what each protection
+stops, what it does not, which files to read, and what to test first.
+[SECURITY.md](SECURITY.md) has the disclosure policy.
 
 ## Contributing
 
