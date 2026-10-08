@@ -14,9 +14,10 @@ export ANDROID_HOME=$HOME/Android/Sdk
 ./gradlew :app:assembleProdStoreRelease
 ```
 
-The unsigned APK lands in `app/build/outputs/apk/prodStore/release/`. Sign it
-before installing (see below). The debug variant,
-`:app:assembleProdWebsiteDebug`, installs as is.
+The unsigned APKs land in `app/build/outputs/apk/prodStore/release/`, one per
+CPU plus a universal one (see below). Sign the one you want before installing
+(see Signing). The debug variant, `:app:assembleProdWebsiteDebug`, installs as
+is and carries every ABI.
 
 The Gradle defaults ask for a 12 GB heap. On a machine with 16 to 24 GB of
 memory, put this in `~/.gradle/gradle.properties` or the build daemon gets
@@ -46,6 +47,42 @@ The environment variables `CI_APP_TITLE`, `CI_APP_FILENAME`,
 `prod`) and `CI_FORCE_INTERNAL_USER_FLAG` override them in CI and in the
 Docker build. Change the package id if you want your own build to install
 next to the official one.
+
+## Which APK to install
+
+Release builds come as four files per flavor. They are the same app, signed
+with the same key and carrying the same version code. Sizes are for the
+`prodStore` build.
+
+| File | For | Size |
+|------|-----|------|
+| `Wren-<version>-arm64-v8a.apk` | nearly every phone and tablet from the last decade, Pixels, GrapheneOS | 85 MB |
+| `Wren-<version>-armeabi-v7a.apk` | old 32-bit ARM devices | 76 MB |
+| `Wren-<version>-x86_64.apk` | Chromebooks, Android-x86, the emulator | 90 MB |
+| `Wren-<version>.apk` | all three in one file, if you do not know or want a single file for a repository | 130 MB |
+
+If you are unsure which CPU you have, a device info app will tell you. In
+Obtainium, put `arm64-v8a` in the APK filter regex so it keeps picking the
+small file.
+
+The native libraries are stored uncompressed and aligned to 16 KB, so Android
+maps them straight from the APK and does not keep a second copy on disk. That
+makes the download bigger than a compressed APK would be and the installed app
+smaller. The universal file pays the most for it.
+
+`tools/apk-report.sh` checks what you built or downloaded:
+
+```sh
+tools/apk-report.sh app/build/outputs/apk/prodStore/release/*.apk
+```
+
+For each file it prints the size, min and target SDK, ABIs and libraries,
+whether the baseline profile is inside, whether the zip and every 64-bit
+library are 16 KB aligned, and the signature state. It exits non-zero if a
+check fails. An unsigned APK is only a failure with `--require-signed`.
+`libargon2.so` and `libnative-utils.so` come from prebuilt Molly artifacts
+that are still 4 KB aligned, so the ELF check flags them until those are
+rebuilt.
 
 ## A reproducible build in Docker
 
