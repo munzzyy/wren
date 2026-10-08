@@ -159,11 +159,11 @@ Desktop, [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
 iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   Signal iOS. Honest status: without an Apple developer account there is no
   App Store, no TestFlight and no push notifications, because Apple ties
-  pushes to Signal's own bundle id. Nothing has been compiled yet: the repo
-  is a rebrand plus a CI recipe for an unsigned IPA that can be sideloaded
-  for seven days at a time with a free Apple ID, and such a build only
-  receives messages while open. That repository explains the limits and what changes the day an
-  account exists.
+  pushes to Signal's own bundle id. The CI job builds an unsigned IPA (first
+  green run on 2026-10-08), but nobody has run it on a phone yet. It can be
+  sideloaded for seven days at a time with a free Apple ID, and such a build
+  only receives messages while open. That repository explains the limits and
+  what changes the day an account exists.
 
 ## Install
 
