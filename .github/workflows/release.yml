@@ -4,27 +4,33 @@ on:
   push:
     tags:
       - "v*"
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      version:
+      tag:
+        description: "Existing tag to build"
         required: true
-        type: string
 
 permissions:
   contents: read # to fetch code (actions/checkout)
 
 env:
-  TAG_REF: "${{ inputs.version || github.ref_name }}"
+  TAG_REF: "${{ github.event.inputs.tag || github.ref_name }}"
   BUILD_ENV_FILE: ${{ vars.BUILD_ENV_FILE || 'beta-stable.env' }}
   HAVE_KEYSTORE: ${{ secrets.SECRET_KEYSTORE != '' }}
 
 jobs:
   build:
     name: Build
-    if: "github.event.base_ref != 'refs/heads/upstream-main'"
     runs-on: ubuntu-24.04
 
     steps:
+      - name: Check tag name
+        run: |
+          if ! [[ "$TAG_REF" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+            echo "Unexpected tag name" >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v6
         with:
           ref: "${{ env.TAG_REF }}"
@@ -92,90 +98,93 @@ jobs:
         run: rm -f certs/keystore.jks
         working-directory: reproducible-builds
 
-      - name: Log APK and AAB checksums
-        run: find outputs \( -name "*.aab" -o -name "*.apk" \) -exec sha256sum '{}' +
+      - name: Name release assets
+        run: ./name-outputs.sh "$TAG_REF" "$GITHUB_WORKSPACE/dist"
         working-directory: reproducible-builds
 
-      - name: Upload APKs
-        uses: actions/upload-artifact@v7
-        with:
-          name: apk
-          path: reproducible-builds/outputs/apk/*/release/*.apk
-          if-no-files-found: error
-
-      - name: Upload Bundles
-        uses: actions/upload-artifact@v7
-        with:
-          name: bundle
-          path: reproducible-builds/outputs/bundle/*Release/*.aab
-          if-no-files-found: error
-
-  prepare_release:
-    name: Prepare release
-    if: "github.event.base_ref != 'refs/heads/upstream-main'"
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: "${{ env.TAG_REF }}"
-
-      - name: Check if release exists
-        id: check_release
+      - name: Compute checksums and notes
         run: |
-          if gh release view "$TAG_REF"; then
-            echo "release_exists=true" >> $GITHUB_OUTPUT
+          cd dist
+          sha256sum ./*.apk | sed 's# \./# #' | tee SHA256SUMS
+          commit=$(git rev-parse --short=12 HEAD)
+          signal=$(sed -n 's/^val canonicalVersionName = "\(.*\)"/\1/p' ../app/build.gradle.kts)
+          if [ "$HAVE_KEYSTORE" = "true" ]; then
+            state="Signed with the release key."
           else
-            echo "release_exists=false" >> $GITHUB_OUTPUT
+            state="Unsigned. Sign them yourself before installing, see BUILDING.md."
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          {
+            echo "Wren $TAG_REF, built from commit $commit, based on Signal $signal."
+            echo
+            echo "$state"
+            echo
+            echo "Wren-<version>.apk is the build without the in-app updater (GitHub and Obtainium)."
+            echo "Wren-website-<version>.apk is the build with the in-app updater."
+            echo
+            echo "SHA-256:"
+            echo
+            echo '```'
+            cat SHA256SUMS
+            echo '```'
+            echo
+            echo "To check that these match the source, follow reproducible-builds/README.md."
+          } > release-notes.md
 
-      - name: Create release draft
-        if: "steps.check_release.outputs.release_exists == 'false'"
-        run: gh release create -d --verify-tag -t "$TAG_REF" "$TAG_REF"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUBLISH_PAT || secrets.GITHUB_TOKEN }}
+      - name: Upload release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS
+            dist/release-notes.md
+          if-no-files-found: error
 
-  upload:
-    name: Upload
+  draft_release:
+    name: Draft release
     runs-on: ubuntu-24.04
-    needs:
-      - build
-      - prepare_release
+    needs: build
+    permissions:
+      contents: write # to create the draft release and upload assets
+
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
         with:
-          ref: "${{ env.TAG_REF }}"
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+          name: release
+          path: dist
 
       - name: Check version for upgrade compatibility
         run: |
-          echo "Listing latest APKs"
-          gh release list --exclude-drafts --limit 10
-          gh release download --pattern '*.apk' --dir latest || exit 0
-          latest_apks=(latest/*.apk)
-          build_apks=(apk/*/release/*.apk)
-          aapt=($ANDROID_HOME/build-tools/*/aapt)
+          mkdir latest
+          if ! gh release download --pattern 'Wren-*v*.apk' --dir latest; then
+            echo "No published release to compare with"
+            exit 0
+          fi
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           version_code() {
-            $aapt d badging "$1" | gawk 'match($0, /^package:.*versionCode=.([0-9]+)/, v) {print v[1]}'
+            "$aapt" d badging "$1" | sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p"
           }
-          echo "Using aapt: $aapt"
-          latest_version_code=$(version_code "$latest_apks")
-          build_version_code=$(version_code "$build_apks")
-          echo "Latest version code: $latest_version_code"
-          echo "Build version code: $build_version_code"
-          if [ "$build_version_code" -le "$latest_version_code" ]; then
+          pick() {
+            find "$1" -maxdepth 1 -name 'Wren-*.apk' ! -name '*website*' | sort | head -1
+          }
+          latest=$(version_code "$(pick latest)")
+          build=$(version_code "$(pick dist)")
+          echo "Latest version code: $latest"
+          echo "Build version code: $build"
+          if [ "$build" -le "$latest" ]; then
             echo "Build version code must be greater than the latest version code" >&2
             exit 1
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload APKs to GitHub release
-        run: gh release upload "$TAG_REF" ./apk/*/release/*.apk --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUBLISH_PAT || secrets.GITHUB_TOKEN }}
+      - name: Create draft release
+        run: |
+          if gh release view "$TAG_REF" > /dev/null 2>&1; then
+            gh release upload "$TAG_REF" dist/*.apk dist/SHA256SUMS --clobber
+          else
+            gh release create "$TAG_REF" -d --verify-tag -t "Wren $TAG_REF" \
+              -F dist/release-notes.md dist/*.apk dist/SHA256SUMS
+          fi
