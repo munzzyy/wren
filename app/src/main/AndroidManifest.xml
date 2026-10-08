@@ -1534,6 +1534,12 @@
             android:theme="@style/Theme.Signal.DayNight.NoActionBar" />
 
         <activity
+            android:name="io.github.munzzyy.wren.duress.PanicConnectActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/TextSecure.DialogActivity" />
+
+        <activity
             android:name="io.github.munzzyy.wren.duress.PanicResponderActivity"
             android:excludeFromRecents="true"
             android:exported="true"

@@ -44,10 +44,9 @@ class PanicResponderActivity : Activity() {
     val store = DuressStore(this)
     val caller = callingPackage
     when (PanicDecision.connect(store.panicTriggerPackage, caller, packageName)) {
-      PanicConnectResult.CONNECT -> {
-        store.connectPanicTrigger(requireNotNull(caller))
-        Log.i(TAG, "Panic trigger connected")
-        setResult(RESULT_OK)
+      PanicConnectResult.ASK_USER -> {
+        Log.i(TAG, "Panic trigger connect needs confirmation")
+        startActivity(PanicConnectActivity.createIntent(this, requireNotNull(caller)).addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT))
       }
       PanicConnectResult.ALREADY_CONNECTED -> setResult(RESULT_OK)
       PanicConnectResult.REFUSE -> {
