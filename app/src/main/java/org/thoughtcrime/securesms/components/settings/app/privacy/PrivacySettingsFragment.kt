@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.components.settings.app.privacy
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.text.SpannableStringBuilder
@@ -14,6 +15,10 @@ import androidx.biometric.BiometricManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.github.munzzyy.wren.duress.DuressPassphraseDialogFragment
+import io.github.munzzyy.wren.duress.FailedAttemptPolicy
+import io.github.munzzyy.wren.duress.PanicAction
 import org.signal.core.ui.util.ThemeUtil
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.ChangePassphraseDialogFragment
@@ -49,6 +54,22 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
 
   private val passphraseLockTriggerValues by lazy { resources.getStringArray(R.array.pref_passphrase_lock_trigger_entries) }
   private val passphraseLockTriggerLabels by lazy { resources.getStringArray(R.array.pref_passphrase_lock_trigger_values) }
+
+  private val failedAttemptLabels by lazy {
+    FailedAttemptPolicy.ALLOWED_LIMITS.map { limit ->
+      if (limit == FailedAttemptPolicy.OFF) {
+        getString(R.string.PrivacySettingsFragment__off)
+      } else {
+        resources.getQuantityString(R.plurals.PrivacySettingsFragment__d_failed_attempts, limit, limit)
+      }
+    }.toTypedArray()
+  }
+
+  private val panicActions = listOf(PanicAction.LOCK, PanicAction.WIPE)
+
+  private val panicActionLabels by lazy {
+    arrayOf(getString(R.string.PrivacySettingsFragment__lock_app), getString(R.string.PrivacySettingsFragment__erase_all_data))
+  }
 
   private lateinit var viewModel: PrivacySettingsViewModel
 
@@ -175,6 +196,67 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
             viewModel.setPassphraseLockTimeout(timeoutSeconds)
           }
           TimeDurationPickerDialog.create(state.passphraseLockTimeout.seconds).show(childFragmentManager, null)
+        }
+      )
+
+      switchPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__duress_passphrase),
+        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__duress_passphrase_summary),
+        isChecked = state.passphraseLock && state.duressPassphrase,
+        isEnabled = state.passphraseLock,
+        onToggle = { isChecked ->
+          showDuressPassphraseDialog(if (isChecked) DuressPassphraseDialogFragment.MODE_SET else DuressPassphraseDialogFragment.MODE_CLEAR)
+          false
+        }
+      )
+
+      clickPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__change_duress_passphrase),
+        isEnabled = state.passphraseLock && state.duressPassphrase,
+        onClick = {
+          showDuressPassphraseDialog(DuressPassphraseDialogFragment.MODE_SET)
+        }
+      )
+
+      radioListPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__wipe_after_failed_unlock_attempts),
+        listItems = failedAttemptLabels,
+        selected = FailedAttemptPolicy.ALLOWED_LIMITS.indexOf(state.failedAttemptLimit),
+        isEnabled = state.passphraseLock,
+        confirmAction = true,
+        onSelected = {
+          FailedAttemptPolicy.ALLOWED_LIMITS.getOrNull(it)?.let { limit -> viewModel.setFailedAttemptLimit(limit) }
+        }
+      )
+
+      textPref(
+        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__wipe_after_failed_unlock_attempts_summary)
+      )
+
+      dividerPref()
+
+      sectionHeaderPref(R.string.PrivacySettingsFragment__panic_button)
+
+      radioListPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__panic_action),
+        listItems = panicActionLabels,
+        selected = panicActions.indexOf(state.panicAction),
+        isEnabled = state.panicTriggerPackage != null,
+        confirmAction = true,
+        onSelected = {
+          panicActions.getOrNull(it)?.let { action -> viewModel.setPanicAction(action) }
+        }
+      )
+
+      textPref(
+        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__panic_action_summary)
+      )
+
+      clickPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__connected_trigger_app),
+        summary = DSLSettingsText.from(getTriggerAppSummary(state.panicTriggerPackage)),
+        onClick = {
+          onTriggerAppClicked(state.panicTriggerPackage)
         }
       )
 
@@ -328,6 +410,44 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
     viewModel.setBiometricScreenLock(enabled)
     (activity as PassphraseActivity).blockRecentAppsScreenshot(enabled)
     WindowUtil.initializeScreenshotSecurity(requireContext(), requireActivity().window)
+  }
+
+  private fun showDuressPassphraseDialog(mode: Int) {
+    val dialog = DuressPassphraseDialogFragment.newInstance(mode)
+    dialog.listener = DuressPassphraseDialogFragment.Listener { viewModel.refresh() }
+    dialog.show(parentFragmentManager, "DuressPassphraseDialogFragment")
+  }
+
+  private fun getTriggerAppName(packageName: String): String {
+    val packageManager = requireContext().packageManager
+    val label = try {
+      packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+    } catch (e: PackageManager.NameNotFoundException) {
+      null
+    }
+    return if (label.isNullOrBlank() || label == packageName) packageName else "$label ($packageName)"
+  }
+
+  private fun getTriggerAppSummary(packageName: String?): String {
+    return if (packageName == null) {
+      getString(R.string.PrivacySettingsFragment__no_trigger_app_connected)
+    } else {
+      getString(R.string.PrivacySettingsFragment__trigger_app_connected, getTriggerAppName(packageName))
+    }
+  }
+
+  private fun onTriggerAppClicked(packageName: String?) {
+    if (packageName == null) {
+      Toast.makeText(requireContext(), R.string.PrivacySettingsFragment__no_trigger_app_connected, Toast.LENGTH_LONG).show()
+      return
+    }
+
+    MaterialAlertDialogBuilder(requireContext())
+      .setTitle(getString(R.string.PrivacySettingsFragment__disconnect_s, getTriggerAppName(packageName)))
+      .setMessage(R.string.PrivacySettingsFragment__disconnect_trigger_message)
+      .setPositiveButton(R.string.PrivacySettingsFragment__disconnect) { _, _ -> viewModel.disconnectPanicTrigger() }
+      .setNegativeButton(android.R.string.cancel, null)
+      .show()
   }
 
   private fun getDeviceLockTimeoutSummary(timeoutSeconds: Long): String {

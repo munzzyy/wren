@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import io.github.munzzyy.wren.duress.PanicAction
 import org.thoughtcrime.securesms.ScreenLockController
 import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.keyvalue.SignalStore
@@ -48,6 +49,9 @@ class PrivacySettingsViewModel(
 
   fun setPassphraseLockEnabled(enabled: Boolean) {
     TextSecurePreferences.setPassphraseLockEnabled(application, enabled)
+    if (!enabled) {
+      repository.clearDuressPassphrase { refresh() }
+    }
     refresh()
   }
 
@@ -58,6 +62,21 @@ class PrivacySettingsViewModel(
 
   fun setPassphraseLockTimeout(seconds: Long) {
     sharedPreferences.edit().putLong(TextSecurePreferences.PASSPHRASE_LOCK_TIMEOUT, seconds).apply()
+    refresh()
+  }
+
+  fun setFailedAttemptLimit(limit: Int) {
+    repository.setFailedAttemptLimit(limit)
+    refresh()
+  }
+
+  fun setPanicAction(action: PanicAction) {
+    repository.setPanicAction(action)
+    refresh()
+  }
+
+  fun disconnectPanicTrigger() {
+    repository.disconnectPanicTrigger()
     refresh()
   }
 
@@ -91,6 +110,10 @@ class PrivacySettingsViewModel(
       passphraseLock = TextSecurePreferences.isPassphraseLockEnabled(application),
       passphraseLockTriggerValues = TextSecurePreferences.getPassphraseLockTrigger(application).triggers,
       passphraseLockTimeout = TextSecurePreferences.getPassphraseLockTimeout(application),
+      duressPassphrase = repository.isDuressPassphraseEnabled,
+      failedAttemptLimit = repository.failedAttemptLimit,
+      panicAction = repository.panicAction,
+      panicTriggerPackage = repository.panicTriggerPackage,
       biometricScreenLock = TextSecurePreferences.isBiometricScreenLockEnabled(application),
       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(application),
       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(application),

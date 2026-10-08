@@ -89,6 +89,12 @@ object DuressManager {
     }
   }
 
+  @JvmStatic
+  @WorkerThread
+  fun isDuressPassphrase(context: Context, passphrase: CharArray): Boolean {
+    return isDuressPassphrase(DuressStore(context), passphrase)
+  }
+
   private fun isDuressPassphrase(store: DuressStore, passphrase: CharArray): Boolean {
     return try {
       if (!store.duressEnabled) {
