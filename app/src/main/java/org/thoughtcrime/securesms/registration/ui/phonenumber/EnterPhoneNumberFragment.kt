@@ -42,6 +42,7 @@ import org.signal.core.util.ThreadUtil
 import org.signal.core.util.getParcelableCompat
 import org.signal.core.util.isNotNullOrBlank
 import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.BuildConfig
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.ViewBinderDelegate
 import org.thoughtcrime.securesms.databinding.FragmentRegistrationEnterPhoneNumberBinding
@@ -580,7 +581,7 @@ class EnterPhoneNumberFragment : LoggingFragment(R.layout.fragment_registration_
         } else if (now < value.nextSmsTimestamp) {
           moveToVerificationEntryScreen()
         } else {
-          presentConfirmNumberDialog(value.phoneNumber, value.isReRegister, value.canSkipSms, missingFcmConsentRequired = true)
+          presentConfirmNumberDialog(value.phoneNumber, value.isReRegister, value.canSkipSms, missingFcmConsentRequired = BuildConfig.FCM_SUPPORTED)
         }
       }
     }
@@ -603,6 +604,9 @@ class EnterPhoneNumberFragment : LoggingFragment(R.layout.fragment_registration_
   }
 
   private fun validateFcmStatus(context: Context): Boolean {
+    if (!BuildConfig.FCM_SUPPORTED) {
+      return false
+    }
     val fcmStatus = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
     Log.d(TAG, "Got $fcmStatus for Play Services status.")
     if (fcmStatus == ConnectionResult.SERVICE_UPDATING) {

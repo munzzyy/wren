@@ -47,6 +47,7 @@ val baseAppFileName = getCiEnv("CI_APP_FILENAME") ?: properties["baseAppFileName
 val basePackageId = getCiEnv("CI_PACKAGE_ID") ?: properties["basePackageId"] as String
 val buildVariants = getCiEnv("CI_BUILD_VARIANTS") ?: properties["buildVariants"] as String
 val forceInternalUserFlag = getCiEnv("CI_FORCE_INTERNAL_USER_FLAG") ?: properties["forceInternalUserFlag"] as String
+val fcmSupported = (getCiEnv("CI_FCM") ?: properties["wrenFcm"] as String) == "true"
 
 fun getCiEnv(name: String) = if (ciEnabled) System.getenv(name).takeUnless { it.isNullOrBlank() } else null
 
@@ -103,6 +104,15 @@ android {
   }
 
   sourceSets {
+    getByName("main") {
+      if (fcmSupported) {
+        java.directories += "src/fcm/java"
+        res.directories += "src/fcm/res"
+      } else {
+        java.directories += "src/foss/java"
+      }
+    }
+
     getByName("test") {
       java.directories += "src/testShared"
       kotlin.directories += "src/testShared"
@@ -194,6 +204,7 @@ android {
     buildConfigField("String", "SIGNAL_CANONICAL_VERSION_NAME", "\"$canonicalVersionName\"")
     buildConfigField("String", "BACKUP_BASE_NAME", "\"$baseAppFileName\"")
     buildConfigField("boolean", "FORCE_INTERNAL_USER_FLAG", forceInternalUserFlag)
+    buildConfigField("boolean", "FCM_SUPPORTED", "$fcmSupported")
     buildConfigField("String", "FDROID_UPDATE_URL", "\"https://munzzyy.dev/wren/fdroid/repo\"")
 
     vectorDrawables.useSupportLibrary = true
@@ -456,18 +467,22 @@ dependencies {
   implementation(libs.androidx.emoji2)
   implementation(libs.androidx.splashscreen)
   implementation(libs.androidx.webkit)
-  implementation(libs.firebase.messaging) {
-    exclude(group = "com.google.firebase", module = "firebase-core")
-    exclude(group = "com.google.firebase", module = "firebase-analytics")
-    exclude(group = "com.google.firebase", module = "firebase-measurement-connector")
-    exclude(group = "com.google.firebase", module = "firebase-iid-interop")
-    exclude(group = "com.google.android.gms", module = "play-services-base")
-    exclude(group = "com.google.android.gms", module = "play-services-basement")
-    exclude(group = "com.google.android.gms", module = "play-services-cloud-messaging")
-    exclude(group = "com.google.android.gms", module = "play-services-stats")
-    exclude(group = "com.google.android.gms", module = "play-services-tasks")
+  if (fcmSupported) {
+    implementation(libs.firebase.messaging) {
+      exclude(group = "com.google.firebase", module = "firebase-core")
+      exclude(group = "com.google.firebase", module = "firebase-analytics")
+      exclude(group = "com.google.firebase", module = "firebase-measurement-connector")
+      exclude(group = "com.google.firebase", module = "firebase-iid-interop")
+      exclude(group = "com.google.android.gms", module = "play-services-base")
+      exclude(group = "com.google.android.gms", module = "play-services-basement")
+      exclude(group = "com.google.android.gms", module = "play-services-cloud-messaging")
+      exclude(group = "com.google.android.gms", module = "play-services-stats")
+      exclude(group = "com.google.android.gms", module = "play-services-tasks")
+    }
+    implementation(project(":core-gms:cloud-messaging"))
   }
-  implementation(project(":core-gms:cloud-messaging"))
+  implementation(project(":core-gms:base"))
+  implementation(project(":core-gms:tasks"))
   implementation(libs.androidx.media)
   implementation(libs.bundles.media3)
   implementation(libs.conscrypt.android)

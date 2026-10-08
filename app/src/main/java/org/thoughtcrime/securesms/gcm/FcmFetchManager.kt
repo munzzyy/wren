@@ -63,6 +63,24 @@ object FcmFetchManager {
   private var highPriority = false
 
   @JvmStatic
+  fun onPushReceived(context: Context, highPriority: Boolean) {
+    try {
+      Log.d(TAG, "[onPushReceived] API: ${Build.VERSION.SDK_INT}, highPriority: $highPriority")
+
+      if (highPriority) {
+        startForegroundService(context)
+      } else if (Build.VERSION.SDK_INT < 26) {
+        startBackgroundService(context)
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "Failed to start service.", e)
+      SignalLocalMetrics.FcmServiceStartFailure.onFcmFailedToStart()
+    }
+
+    enqueueFetch(context, highPriority)
+  }
+
+  @JvmStatic
   fun startBackgroundService(context: Context) {
     Log.i(TAG, "Starting in the background.")
     context.startService(Intent(context, FcmFetchBackgroundService::class.java))

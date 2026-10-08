@@ -11,6 +11,7 @@ import androidx.annotation.StringRes;
 import androidx.lifecycle.LiveData;
 
 import org.signal.core.util.logging.Log;
+import org.thoughtcrime.securesms.BuildConfig;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.signal.mediasend.SentMediaQuality;
@@ -531,6 +532,9 @@ public final class SettingsValues extends SignalStoreValues {
       boolean fcmEnabled = SignalStore.account().isFcmEnabled();
       method = fcmEnabled ? NotificationDeliveryMethod.FCM
                           : NotificationDeliveryMethod.WEBSOCKET;
+    }
+    if (!BuildConfig.FCM_SUPPORTED && method == NotificationDeliveryMethod.FCM) {
+      return NotificationDeliveryMethod.WEBSOCKET;
     }
     return method;
   }

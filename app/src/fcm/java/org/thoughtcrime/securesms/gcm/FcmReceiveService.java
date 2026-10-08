@@ -1,10 +1,6 @@
 package org.thoughtcrime.securesms.gcm;
 
-import android.content.Context;
-import android.os.Build;
-
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -17,7 +13,6 @@ import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.registration.fcm.PushChallengeRequest;
 import org.thoughtcrime.securesms.service.KeyCachingService;
 import org.thoughtcrime.securesms.util.NetworkUtil;
-import org.thoughtcrime.securesms.util.SignalLocalMetrics;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 
 import java.util.Locale;
@@ -57,7 +52,8 @@ public class FcmReceiveService extends FirebaseMessagingService {
     } else if (verificationCodeRequest != null && SignalStore.account().isPrimaryDevice()) {
       handleVerificationCodeRequested(verificationCodeRequest, remoteMessage.getSentTime());
     } else {
-      handleReceivedNotification(AppDependencies.getApplication(), remoteMessage);
+      FcmFetchManager.onPushReceived(AppDependencies.getApplication(),
+                                     remoteMessage.getPriority() == RemoteMessage.PRIORITY_HIGH);
     }
   }
 
@@ -68,7 +64,7 @@ public class FcmReceiveService extends FirebaseMessagingService {
     }
 
     Log.w(TAG, "onDeleteMessages() -- Messages may have been dropped. Doing a normal message fetch.");
-    handleReceivedNotification(AppDependencies.getApplication(), null);
+    FcmFetchManager.onPushReceived(AppDependencies.getApplication(), false);
   }
 
   @Override
@@ -96,25 +92,6 @@ public class FcmReceiveService extends FirebaseMessagingService {
   @Override
   public void onSendError(@NonNull String s, @NonNull Exception e) {
     Log.w(TAG, "onSendError()", e);
-  }
-
-  // MOLLY: Make this function public to use it from UnifiedPushReceiver
-  public static void handleReceivedNotification(Context context, @Nullable RemoteMessage remoteMessage) {
-    boolean highPriority = remoteMessage != null && remoteMessage.getPriority() == RemoteMessage.PRIORITY_HIGH;
-    try {
-      Log.d(TAG, String.format(Locale.US, "[handleReceivedNotification] API: %s, RemoteMessagePriority: %s", Build.VERSION.SDK_INT, remoteMessage != null ? remoteMessage.getPriority() : "n/a"));
-
-      if (highPriority) {
-        FcmFetchManager.startForegroundService(context);
-      } else if (Build.VERSION.SDK_INT < 26) {
-        FcmFetchManager.startBackgroundService(context);
-      }
-    } catch (Exception e) {
-      Log.w(TAG, "Failed to start service.", e);
-      SignalLocalMetrics.FcmServiceStartFailure.onFcmFailedToStart();
-    }
-
-    FcmFetchManager.enqueueFetch(context, highPriority);
   }
 
   private static void handleRegistrationPushChallenge(@NonNull String challenge) {
