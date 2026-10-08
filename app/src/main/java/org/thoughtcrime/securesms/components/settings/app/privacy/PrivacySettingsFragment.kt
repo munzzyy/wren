@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.github.munzzyy.wren.devicecheck.DeviceCheckActivity
 import io.github.munzzyy.wren.duress.DuressPassphraseDialogFragment
 import io.github.munzzyy.wren.duress.FailedAttemptPolicy
 import io.github.munzzyy.wren.duress.PanicAction
@@ -103,6 +104,16 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
 
   private fun getConfiguration(state: PrivacySettingsState): DSLConfiguration {
     return configure {
+
+      clickPref(
+        title = DSLSettingsText.from(R.string.DeviceCheck__check_this_device),
+        summary = DSLSettingsText.from(R.string.DeviceCheck__check_this_device_summary),
+        onClick = {
+          startActivity(DeviceCheckActivity.createIntent(requireContext()))
+        }
+      )
+
+      dividerPref()
 
       sectionHeaderPref(R.string.PrivacySettingsFragment__messaging)
 

@@ -1525,6 +1525,11 @@
         </receiver>
 
         <activity
+            android:name="io.github.munzzyy.wren.devicecheck.DeviceCheckActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Signal.DayNight.NoActionBar" />
+
+        <activity
             android:name="io.github.munzzyy.wren.duress.PanicResponderActivity"
             android:excludeFromRecents="true"
             android:exported="true"
