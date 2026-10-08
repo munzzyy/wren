@@ -103,10 +103,11 @@ reason under "Keeping up with Signal".
 
 ## Status
 
-Wren is new. The first release is 8.20.5-1. Look for it on the
+Wren is new. The first release, 8.20.5-1, is on the
 [Releases](https://github.com/munzzyy/wren/releases) page with its SHA-256
-sums; if it is not there yet it is being built and signed, and
-[BUILDING.md](BUILDING.md) has the build.
+sums, and the reproducible-build check rebuilt it from source in CI and found
+every APK identical
+([run 37850542233](https://github.com/munzzyy/wren/actions/runs/37850542233)).
 The code builds, 2842 unit tests pass in CI, and every feature above is in,
 but none of it has been through a round of real-phone testing by people other
 than me. Treat it as a beta and keep a backup.
@@ -128,7 +129,7 @@ SHA-256: b66420073b986655a97cb35b166fa5a06abd5119545b9e0b21b087d0f71a7d66
 | UnifiedPush (no Google push) | no | yes | yes |
 | Tor and SOCKS proxy | no | yes | yes |
 | Runs without Google Play services | yes, websocket fallback | yes | yes |
-| Reproducible builds | yes | yes | set up, first check at the first release |
+| Reproducible builds | yes | yes | yes, checked in CI against each release |
 | Duress passphrase that wipes | no | no | yes |
 | Wipe after N failed unlocks | no | no | yes |
 | PanicKit responder | lock only | lock only | lock or wipe |
