@@ -20,7 +20,7 @@ internal interface ChatDestination {
    * Copies one attachment into media/ and returns the name it was saved under, or null when it
    * could not be read and should be listed as missing.
    */
-  fun writeMedia(name: String, contentType: String, open: () -> InputStream): String?
+  fun writeMedia(name: String, open: () -> InputStream): String?
 
   /** Removes what this chat wrote so far, where that is possible. */
   fun discard()
@@ -30,6 +30,8 @@ internal class FolderDestination(private val context: Context, val folder: Docum
 
   companion object {
     private val TAG = Log.tag(FolderDestination::class.java)
+
+    private const val MEDIA_MIME_TYPE = "application/octet-stream"
   }
 
   private var mediaFolder: DocumentFile? = null
@@ -39,10 +41,11 @@ internal class FolderDestination(private val context: Context, val folder: Docum
     openOutput(file).use(write)
   }
 
-  override fun writeMedia(name: String, contentType: String, open: () -> InputStream): String? {
+  /** Created as octet-stream so the provider keeps [name] as it is and adds no extension of its own. */
+  override fun writeMedia(name: String, open: () -> InputStream): String? {
     val media = mediaFolder ?: (folder.createDirectory(ExportFileNames.MEDIA_FOLDER) ?: throw IOException("Could not create the media folder")).also { mediaFolder = it }
 
-    val target = media.createFile(contentType, name)
+    val target = media.createFile(MEDIA_MIME_TYPE, name)
     if (target == null) {
       Log.w(TAG, "Could not create a media file, marking it missing")
       return null
@@ -68,5 +71,17 @@ internal class FolderDestination(private val context: Context, val folder: Docum
 
   private fun openOutput(file: DocumentFile): OutputStream {
     return context.contentResolver.openOutputStream(file.uri) ?: throw IOException("Could not open ${file.name}")
+  }
+}
+
+internal object ExportFolders {
+
+  private val TAG = Log.tag(ExportFolders::class.java)
+
+  /** Swaps the partial name for [finalName]. If the provider refuses, the export keeps the partial name. */
+  fun finish(file: DocumentFile, finalName: String) {
+    if (!file.renameTo(finalName)) {
+      Log.w(TAG, "Could not rename the finished export")
+    }
   }
 }

@@ -4,7 +4,6 @@
 package io.github.munzzyy.wren.export
 
 import android.content.Context
-import android.webkit.MimeTypeMap
 import androidx.annotation.WorkerThread
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.attachments.DatabaseAttachment
@@ -37,8 +36,6 @@ internal class ChatExporter(
   companion object {
     private const val PAGE_SIZE = 500L
   }
-
-  private val mimeTypes: MimeTypeMap = MimeTypeMap.getSingleton()
 
   fun messageCount(threadId: Long): Int = SignalDatabase.messages.getMessageCountForThread(threadId)
 
@@ -100,7 +97,7 @@ internal class ChatExporter(
 
   private fun exportMedia(target: ChatDestination, messageId: Long, index: Int, attachment: DatabaseAttachment): ExportAttachment {
     val contentType = attachment.contentType?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
-    val name = ExportFileNames.mediaFileName(messageId, index, attachment.fileName, contentType) { mimeTypes.getExtensionFromMimeType(it) }
+    val name = ExportFileNames.mediaFileName(messageId, index, attachment.fileName, contentType)
     val uri = attachment.uri
     val available = attachment.hasData && uri != null
 
@@ -117,7 +114,7 @@ internal class ChatExporter(
       return result
     }
 
-    val savedAs = target.writeMedia(name, contentType) { CancelableInputStream(PartAuthority.getAttachmentStream(context, uri)) }
+    val savedAs = target.writeMedia(name) { CancelableInputStream(PartAuthority.getAttachmentStream(context, uri)) }
     return if (savedAs == null) result.copy(missing = true) else result.copy(fileName = savedAs)
   }
 

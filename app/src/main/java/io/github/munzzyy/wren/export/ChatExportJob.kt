@@ -119,6 +119,7 @@ class ChatExportJob private constructor(
       val zone = ZoneId.systemDefault()
       val exporter = ChatExporter(context, format, includeMedia) { isCanceled }
       var folder: DocumentFile? = null
+      var finalName: String? = null
 
       if (passphrase != null) ExportSpool.deleteStale(context.cacheDir)
 
@@ -127,7 +128,9 @@ class ChatExportJob private constructor(
         destination = { chatName ->
           val folderName = ExportFileNames.folderName(chatName, exportedAt, zone)
           if (passphrase == null) {
-            FolderDestination(context, root.createDirectory(folderName) ?: throw IOException("Could not create the export folder")).also { folder = it.folder }
+            finalName = folderName
+            val partial = root.createDirectory(ExportFileNames.partialName(folderName)) ?: throw IOException("Could not create the export folder")
+            FolderDestination(context, partial).also { folder = it.folder }
           } else {
             val created = EncryptedArchive.create(context, root, ExportFileNames.encryptedChatFileName(exportedAt, zone), passphrase, exportedAt)
             archive = created
@@ -149,9 +152,11 @@ class ChatExportJob private constructor(
           text = context.getString(R.string.ChatExportJob__saved_encrypted_as_s, finishedArchive.file.name.orEmpty())
         )
       } else {
+        val written = folder ?: throw IOException("The export folder is missing")
+        finalName?.let { ExportFolders.finish(written, it) }
         ExportNotifications.postFinished(
           context = context,
-          folder = folder ?: throw IOException("The export folder is missing"),
+          folder = written,
           title = context.getString(R.string.ChatExportJob__export_finished),
           text = context.getString(R.string.ChatExportJob__tap_to_open_the_folder)
         )

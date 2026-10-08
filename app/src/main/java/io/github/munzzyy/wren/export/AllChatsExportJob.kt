@@ -117,7 +117,7 @@ class AllChatsExportJob private constructor(
 
       val chatDestination: (String) -> ChatDestination
       if (passphrase == null) {
-        val folder = root.createDirectory(folderName) ?: throw IOException("Could not create the export folder")
+        val folder = root.createDirectory(ExportFileNames.partialName(folderName)) ?: throw IOException("Could not create the export folder")
         exportFolder = folder
         chatDestination = { name -> FolderDestination(context, folder.createDirectory(name) ?: throw IOException("Could not create a chat folder")) }
       } else {
@@ -175,6 +175,7 @@ class AllChatsExportJob private constructor(
         AllChatsTally.Outcome.WROTE_SOME -> {
           val finishedArchive = archive
           finishedArchive?.finish()
+          exportFolder?.let { ExportFolders.finish(it, folderName) }
           keepFolder = true
           ExportNotifications.postFinished(
             context = context,

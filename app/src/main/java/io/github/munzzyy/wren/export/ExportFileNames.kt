@@ -16,8 +16,40 @@ object ExportFileNames {
   const val ALL_CHATS_PREFIX = "Wren export"
   const val ENCRYPTED_CHAT_PREFIX = "Wren chat"
 
+  /** Types a browser or file manager only displays or plays. The first extension is the default. */
+  val PASSIVE_TYPES: Map<String, List<String>> = mapOf(
+    "image/jpeg" to listOf("jpg", "jpeg"),
+    "image/jpg" to listOf("jpg", "jpeg"),
+    "image/png" to listOf("png"),
+    "image/gif" to listOf("gif"),
+    "image/webp" to listOf("webp"),
+    "image/heic" to listOf("heic"),
+    "image/heif" to listOf("heif", "heic"),
+    "image/avif" to listOf("avif"),
+    "image/bmp" to listOf("bmp"),
+    "video/mp4" to listOf("mp4", "m4v"),
+    "video/3gpp" to listOf("3gp"),
+    "video/webm" to listOf("webm"),
+    "video/quicktime" to listOf("mov"),
+    "audio/mp4" to listOf("m4a", "mp4"),
+    "audio/x-m4a" to listOf("m4a"),
+    "audio/aac" to listOf("aac", "m4a"),
+    "audio/mpeg" to listOf("mp3"),
+    "audio/ogg" to listOf("ogg", "oga", "opus"),
+    "audio/opus" to listOf("opus"),
+    "audio/wav" to listOf("wav"),
+    "audio/x-wav" to listOf("wav"),
+    "audio/flac" to listOf("flac"),
+    "audio/amr" to listOf("amr"),
+    "application/pdf" to listOf("pdf"),
+    "text/plain" to listOf("txt"),
+    "text/x-signal-plain" to listOf("txt"),
+    "text/vcard" to listOf("vcf"),
+    "text/x-vcard" to listOf("vcf")
+  )
+
   private const val FALLBACK_EXTENSION = "bin"
-  private val SAFE_EXTENSION = Regex("^[a-z0-9]{1,8}$")
+  private const val PARTIAL_SUFFIX = ".partial"
   private val FORBIDDEN = setOf('/', '\\', ':', '*', '?', '"', '<', '>', '|')
   private val FOLDER_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HHmm", Locale.US)
 
@@ -66,6 +98,12 @@ object ExportFileNames {
   }
 
   /**
+   * What a folder or archive is called while it is being written. Renamed to [name] at the end,
+   * so whatever a kill or a wipe leaves behind is easy to spot as unfinished.
+   */
+  fun partialName(name: String): String = ".$name$PARTIAL_SUFFIX"
+
+  /**
    * Returns [name], or [name] with " (2)", " (3)" and so on appended, whichever is not in [taken]
    * yet, and adds it to [taken]. Compared without case, since most storage providers ignore it.
    */
@@ -79,28 +117,19 @@ object ExportFileNames {
     return candidate
   }
 
-  fun mediaFileName(
-    messageId: Long,
-    index: Int,
-    originalFileName: String?,
-    contentType: String?,
-    extensionForMimeType: (String) -> String?
-  ): String {
-    return "$messageId-$index.${extension(originalFileName, contentType, extensionForMimeType)}"
+  /**
+   * Names one attachment in media/. The extension always comes from [PASSIVE_TYPES], so a file
+   * sent as an image can't land next to chat.html as .html, .svg or anything a browser would run.
+   */
+  fun mediaFileName(messageId: Long, index: Int, originalFileName: String?, contentType: String?): String {
+    return "$messageId-$index.${extension(originalFileName, contentType)}"
   }
 
-  fun extension(originalFileName: String?, contentType: String?, extensionForMimeType: (String) -> String?): String {
-    val fromName = originalFileName
-      ?.substringAfterLast('/')
-      ?.substringAfterLast('\\')
-      ?.takeIf { it.lastIndexOf('.') > 0 }
-      ?.substringAfterLast('.')
-      ?.lowercase(Locale.US)
-
-    if (fromName != null && SAFE_EXTENSION.matches(fromName)) {
-      return fromName
-    }
-
+  /**
+   * The original extension is kept only when it belongs to the same passive type. Any other type
+   * becomes .bin, whatever the sender called it.
+   */
+  fun extension(originalFileName: String?, contentType: String?): String {
     val mimeType = contentType
       ?.substringBefore(';')
       ?.trim()
@@ -108,8 +137,16 @@ object ExportFileNames {
       ?.takeIf { it.isNotEmpty() }
       ?: return FALLBACK_EXTENSION
 
-    val fromType = extensionForMimeType(mimeType)?.lowercase(Locale.US)
-    return if (fromType != null && SAFE_EXTENSION.matches(fromType)) fromType else FALLBACK_EXTENSION
+    val allowed = PASSIVE_TYPES[mimeType] ?: return FALLBACK_EXTENSION
+
+    val fromName = originalFileName
+      ?.substringAfterLast('/')
+      ?.substringAfterLast('\\')
+      ?.takeIf { it.lastIndexOf('.') > 0 }
+      ?.substringAfterLast('.')
+      ?.lowercase(Locale.US)
+
+    return if (fromName != null && fromName in allowed) fromName else allowed.first()
   }
 
   private fun isDropped(codePoint: Int): Boolean {
