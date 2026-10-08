@@ -1524,6 +1524,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="io.github.munzzyy.wren.export.ChatExportCancelReceiver"
+            android:exported="false" />
+
         <activity
             android:name="io.github.munzzyy.wren.duress.PanicResponderActivity"
             android:excludeFromRecents="true"
