@@ -14,6 +14,7 @@ object ExportFileNames {
   const val FALLBACK_NAME = "chat"
   const val MAX_NAME_LENGTH = 64
   const val ALL_CHATS_PREFIX = "Wren export"
+  const val ENCRYPTED_CHAT_PREFIX = "Wren chat"
 
   private const val FALLBACK_EXTENSION = "bin"
   private val SAFE_EXTENSION = Regex("^[a-z0-9]{1,8}$")
@@ -54,6 +55,14 @@ object ExportFileNames {
 
   fun allChatsFolderName(exportedAtMillis: Long, zone: ZoneId): String {
     return "$ALL_CHATS_PREFIX ${FOLDER_TIMESTAMP.format(Instant.ofEpochMilli(exportedAtMillis).atZone(zone))}"
+  }
+
+  /**
+   * The name of an encrypted single chat export, without the extension. It leaves the chat's name
+   * out, since the file name is the one part of the export anyone can read.
+   */
+  fun encryptedChatFileName(exportedAtMillis: Long, zone: ZoneId): String {
+    return "$ENCRYPTED_CHAT_PREFIX ${FOLDER_TIMESTAMP.format(Instant.ofEpochMilli(exportedAtMillis).atZone(zone))}"
   }
 
   /**

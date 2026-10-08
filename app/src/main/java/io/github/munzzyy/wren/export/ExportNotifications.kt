@@ -69,6 +69,14 @@ internal object ExportNotifications {
     )
   }
 
+  fun postPassphraseLost(context: Context) {
+    postFailed(
+      context = context,
+      title = context.getString(R.string.ChatExportJob__encrypted_export_stopped),
+      text = context.getString(R.string.ChatExportJob__passphrase_lost_body)
+    )
+  }
+
   fun postFailed(context: Context, title: String, text: String) {
     post(
       context = context,

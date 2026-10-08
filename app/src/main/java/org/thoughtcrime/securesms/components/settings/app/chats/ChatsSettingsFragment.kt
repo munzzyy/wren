@@ -21,6 +21,7 @@ import androidx.navigation.fragment.findNavController
 import io.github.munzzyy.wren.export.AllChatsExportJob
 import io.github.munzzyy.wren.export.ChatExportDialog
 import io.github.munzzyy.wren.export.ChatExportFormat
+import io.github.munzzyy.wren.export.ExportPassphrases
 import kotlinx.coroutines.launch
 import org.signal.core.ui.compose.ComposeFragment
 import org.signal.core.ui.compose.DayNightPreviews
@@ -42,6 +43,7 @@ import org.thoughtcrime.securesms.util.navigation.safeNavigate
 
 private const val STATE_PENDING_EXPORT_FORMAT = "pending_export_all_format"
 private const val STATE_PENDING_EXPORT_MEDIA = "pending_export_all_media"
+private const val STATE_PENDING_EXPORT_PASSPHRASE = "pending_export_all_passphrase_token"
 
 /**
  * Displays a list of chats settings options to the user, including
@@ -58,7 +60,7 @@ class ChatsSettingsFragment : ComposeFragment() {
     super.onCreate(savedInstanceState)
     val format = savedInstanceState?.getString(STATE_PENDING_EXPORT_FORMAT)
     if (format != null) {
-      pendingExport = PendingExport(ChatExportFormat.valueOf(format), savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true))
+      pendingExport = PendingExport(ChatExportFormat.valueOf(format), savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true), savedInstanceState.getString(STATE_PENDING_EXPORT_PASSPHRASE))
     }
   }
 
@@ -67,6 +69,7 @@ class ChatsSettingsFragment : ComposeFragment() {
     pendingExport?.let {
       outState.putString(STATE_PENDING_EXPORT_FORMAT, it.format.name)
       outState.putBoolean(STATE_PENDING_EXPORT_MEDIA, it.includeMedia)
+      outState.putString(STATE_PENDING_EXPORT_PASSPHRASE, it.passphraseToken)
     }
   }
 
@@ -87,12 +90,13 @@ class ChatsSettingsFragment : ComposeFragment() {
   }
 
   private fun startExportAll() {
-    ChatExportDialog.show(requireContext(), R.string.ChatsSettingsFragment__export_all_chats) { format, includeMedia ->
-      pendingExport = PendingExport(format, includeMedia)
+    ChatExportDialog.show(requireContext(), R.string.ChatsSettingsFragment__export_all_chats) { format, includeMedia, passphraseToken ->
+      pendingExport = PendingExport(format, includeMedia, passphraseToken)
       try {
         exportFolderLauncher.launch(null)
       } catch (e: ActivityNotFoundException) {
         pendingExport = null
+        passphraseToken?.let { ExportPassphrases.discard(it) }
         Toast.makeText(requireContext(), R.string.ChatExportDialog__no_folder_picker, Toast.LENGTH_LONG).show()
       }
     }
@@ -101,16 +105,19 @@ class ChatsSettingsFragment : ComposeFragment() {
   private fun onExportFolderChosen(treeUri: Uri?) {
     val export = pendingExport ?: return
     pendingExport = null
-    if (treeUri == null) return
+    if (treeUri == null) {
+      export.passphraseToken?.let { ExportPassphrases.discard(it) }
+      return
+    }
 
     val appContext = requireContext().applicationContext
     SignalExecutors.BOUNDED.execute {
-      AllChatsExportJob.enqueue(appContext, export.format, export.includeMedia, treeUri)
+      AllChatsExportJob.enqueue(appContext, export.format, export.includeMedia, treeUri, export.passphraseToken)
     }
     Toast.makeText(requireContext(), R.string.ChatExportDialog__export_all_started, Toast.LENGTH_LONG).show()
   }
 
-  private data class PendingExport(val format: ChatExportFormat, val includeMedia: Boolean)
+  private data class PendingExport(val format: ChatExportFormat, val includeMedia: Boolean, val passphraseToken: String?)
 
   private inner class Callbacks : ChatsSettingsCallbacks {
     override fun onNavigationClick() {
