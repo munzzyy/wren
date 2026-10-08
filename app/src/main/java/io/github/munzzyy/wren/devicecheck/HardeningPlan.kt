@@ -2,16 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 package io.github.munzzyy.wren.devicecheck
 
+/** Where each setting lives in Wren's settings, for turning it back off by hand. */
+enum class SettingsScreen {
+  PRIVACY,
+  CHATS,
+  NOTIFICATIONS,
+  PROXY
+}
+
+/** A tap on a row can only make things stricter; weakening is left to the settings screen. */
+enum class TapAction {
+  HARDEN,
+  OPEN_SETTINGS,
+  NONE
+}
+
 // Passphrase, duress and Registration Lock stay out: each needs a secret only the user can choose.
-enum class HardenedSetting(val check: CheckId, val primaryDeviceOnly: Boolean = false, val inBulkPlan: Boolean = true) {
-  SCREEN_SECURITY(CheckId.SCREEN_SECURITY),
-  INCOGNITO_KEYBOARD(CheckId.INCOGNITO_KEYBOARD),
-  NOTIFICATION_PRIVACY(CheckId.NOTIFICATION_PRIVACY),
-  LINK_PREVIEWS(CheckId.LINK_PREVIEWS),
-  READ_RECEIPTS(CheckId.READ_RECEIPTS, primaryDeviceOnly = true),
-  TYPING_INDICATORS(CheckId.TYPING_INDICATORS, primaryDeviceOnly = true),
-  BLOCK_UNKNOWN(CheckId.BLOCK_UNKNOWN),
-  ORBOT(CheckId.ORBOT, inBulkPlan = false);
+enum class HardenedSetting(val check: CheckId, val screen: SettingsScreen, val primaryDeviceOnly: Boolean = false, val inBulkPlan: Boolean = true) {
+  SCREEN_SECURITY(CheckId.SCREEN_SECURITY, SettingsScreen.PRIVACY),
+  INCOGNITO_KEYBOARD(CheckId.INCOGNITO_KEYBOARD, SettingsScreen.PRIVACY),
+  NOTIFICATION_PRIVACY(CheckId.NOTIFICATION_PRIVACY, SettingsScreen.NOTIFICATIONS),
+  LINK_PREVIEWS(CheckId.LINK_PREVIEWS, SettingsScreen.CHATS),
+  READ_RECEIPTS(CheckId.READ_RECEIPTS, SettingsScreen.PRIVACY, primaryDeviceOnly = true),
+  TYPING_INDICATORS(CheckId.TYPING_INDICATORS, SettingsScreen.PRIVACY, primaryDeviceOnly = true),
+  BLOCK_UNKNOWN(CheckId.BLOCK_UNKNOWN, SettingsScreen.PRIVACY),
+  ORBOT(CheckId.ORBOT, SettingsScreen.PROXY, inBulkPlan = false);
 
   fun isHardened(snapshot: DeviceSnapshot): Boolean {
     return when (this) {
@@ -39,6 +54,14 @@ enum class HardenedSetting(val check: CheckId, val primaryDeviceOnly: Boolean = 
 }
 
 object HardeningPlan {
+
+  fun onTap(setting: HardenedSetting, snapshot: DeviceSnapshot): TapAction {
+    return when {
+      setting.isHardened(snapshot) -> TapAction.OPEN_SETTINGS
+      setting.canChange(snapshot) -> TapAction.HARDEN
+      else -> TapAction.NONE
+    }
+  }
 
   fun changesFor(snapshot: DeviceSnapshot): List<HardenedSetting> {
     return HardenedSetting.entries.filter { it.inBulkPlan && !it.isHardened(snapshot) && it.canChange(snapshot) }
