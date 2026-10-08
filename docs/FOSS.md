@@ -91,8 +91,9 @@ handle the WebSocket:
 ./gradlew :app:assembleProdStoreRelease -PwrenFcm=true
 ```
 
-or set `wrenFcm=true` in `app/gradle.properties`, or `CI_FCM=true` in the CI
-environment. That links `firebase-messaging` and puts the sources under
+or set `wrenFcm=true` in `app/gradle.properties`, or `CI_FCM=true` in the
+environment Gradle runs in (the Docker release build does not pass it
+through). That links `firebase-messaging` and puts the sources under
 `app/src/fcm/` in place of the stubs in `app/src/foss/`.
 
 Two things to know before you do:

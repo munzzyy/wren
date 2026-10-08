@@ -24,10 +24,14 @@ apps is in [THREAT-MODEL.md](THREAT-MODEL.md).
    site).
 2. Open the trigger app and turn Wren on in its list of apps to trigger. The
    trigger app sends Wren a CONNECT request.
-3. In Wren, open Settings, Privacy, Panic button. "Connected trigger app"
-   should show the trigger's name and package id. Read the package id. If it
-   is not the app you meant, tap it and disconnect.
-4. Leave the action on "Lock app" for now. Test it (below). Switch to "Erase
+3. Wren asks "Let this app trigger Wren's panic action?" and shows the app's
+   name, its package id and the SHA-256 of its signing certificate. Check the
+   package id (Ripple's is `info.guardianproject.ripple`) and, if you can, the
+   certificate against the one the app's publisher lists. Tap Allow.
+4. In Wren, open Settings, Privacy, Panic button. "Connected trigger app"
+   shows the same name, package id and certificate. If it is not the app you
+   meant, tap it and disconnect.
+5. Leave the action on "Lock app" for now. Test it (below). Switch to "Erase
    all data" only when you have seen it work and you mean it.
 
 The action picker stays disabled until a trigger is connected.
@@ -39,22 +43,34 @@ Wren handles three PanicKit actions. All three arrive at
 Wren learns who sent a message from `getCallingPackage()`, which Android fills
 in only when the sender used `startActivityForResult`.
 
-CONNECT. If no trigger is connected and the sender is known, Wren stores the
-sender's package name, sets the action to Lock, and answers RESULT_OK. If the
-same app connects again, Wren answers RESULT_OK and changes nothing, so a
-reconnect does not undo an Erase setting you chose on purpose. If a different
-app tries to connect while one is already connected, Wren answers
-RESULT_CANCELED and changes nothing. A sender Wren cannot identify, or Wren
-itself, is refused.
+Every message from the connected trigger's package is also checked against
+the SHA-256 of the signing certificate Wren stored when you allowed it
+(`SigningCertificates.kt`). The digest covers the certificate the app is
+signed with now, so a different app installed under the same package id does
+not match.
+
+CONNECT. If no trigger is connected and the sender is known, Wren shows the
+confirmation above. Only Allow stores the sender's package name and
+certificate digest, sets the action to Lock, and answers RESULT_OK. If the
+same app with the same certificate connects again, Wren answers RESULT_OK and
+changes nothing, so a reconnect does not undo an Erase setting you chose on
+purpose. If the package matches but the certificate does not, Wren drops the
+stored trigger and answers RESULT_CANCELED; the next CONNECT asks you again.
+If a different app tries to connect while one is already connected, Wren
+answers RESULT_CANCELED and changes nothing. A sender Wren cannot identify,
+or Wren itself, is refused.
 
 TRIGGER. Wren erases only if the action is set to Erase and the sender is the
-connected trigger. In every other case it locks, if the passphrase lock is on,
-and does nothing if it is off. A trigger from an unknown sender, from an
-unconnected app, or while the action is Lock can lock Wren and can never
-erase it.
+connected trigger with the stored certificate. In every other case it locks,
+if the passphrase lock is on, and does nothing if it is off. A trigger from an
+unknown sender, from an unconnected app, or while the action is Lock can lock
+Wren and can never erase it. A trigger from the connected package with a
+different certificate, or one whose certificate Wren cannot read, is treated
+like any other app and the stored trigger is dropped.
 
-DISCONNECT. If the sender is the connected trigger, Wren forgets it and sets
-the action back to Lock. From anyone else, Wren changes nothing.
+DISCONNECT. If the sender is the connected trigger's package, Wren forgets it
+and sets the action back to Lock, whichever certificate it has. From anyone
+else, Wren changes nothing.
 
 Disconnecting from inside Wren (Settings, Privacy, Panic button, tap the
 connected app) does the same thing as DISCONNECT. Wren also has Molly's older
@@ -69,11 +85,10 @@ the passphrase. It also clears message notifications.
 
 ## Why a new trigger starts on Lock and never on Erase
 
-CONNECT comes from the other app, not from a screen inside Wren. Nothing in
-Wren shows you a dialog when it arrives, and if the screen is off or Wren is
-locked it still arrives. If a connection could arrive already set to erase,
-then any app that managed to connect first, or anyone with your unlocked phone
-for a minute, could arm a wipe without you reading a single word.
+CONNECT comes from the other app. Wren asks before it stores anything, but
+the question is about which app may press the button, not what the button
+does. If a connection could arrive already set to erase, anyone with your
+unlocked phone for a minute could connect an app and arm a wipe in one tap.
 
 So connecting only registers the app. Turning on Erase is a separate step
 inside Wren, after you have looked at which app is connected. Connecting or
@@ -110,13 +125,13 @@ touching your account or your primary phone.
    trigger is connected (any small PanicKit test app will do) and check it is
    refused and the connected app in Settings has not changed.
 
-Wren logs each decision as `Panic trigger: LOCK`, `WIPE` or `NOTHING`, plus
-`Panic trigger connected` and `Panic trigger connect refused`. Use a debug
-build if you want to read them in logcat; I have not checked how much of that
-log a release build exposes.
+Wren does not log what it decided. The log outlives an erase and would say
+what caused it, so check the result in the app instead: locked, erased, or
+the trigger gone from Settings.
 
 The decision logic has unit tests
-(`app/src/test/java/io/github/munzzyy/wren/duress/PanicDecisionTest.kt`).
+(`app/src/test/java/io/github/munzzyy/wren/duress/PanicDecisionTest.kt` and
+`PanicCertificateTest.kt` next to it).
 The activity, the settings screen and the wipe have no automated tests and
 have not been run on a real phone against a real Ripple yet. Treat this as a
 beta feature until someone has.
@@ -129,14 +144,17 @@ beta feature until someone has.
 - A trigger that only broadcasts can lock and never erase. Whether your
   trigger uses an activity result or a broadcast depends on that app. I have
   not read Ripple's current source for it, so test yours.
-- Wren trusts the trigger by package name, not by signing certificate. If the
-  trigger app is removed and another app with that package name is installed,
-  Wren will treat it as the trigger. Check the package id in Settings if you
-  reinstall.
-- The first app to send CONNECT wins. If a hostile app connects before the
-  one you meant, it shows in Settings under its own name, and you can
-  disconnect it. It cannot erase while the action is Lock. It can lock Wren
-  at any time with a broadcast, as in Molly.
+- Wren pins the certificate the trigger is signed with when you allow it. A
+  trigger that later rotates to a new signing key no longer matches: its
+  next message is treated like any other app's and Wren disconnects it, so
+  connect it again and check the new certificate. Triggers connected with a
+  Wren version that did not record the certificate show as not connected
+  until you connect them again.
+- A hostile app can still ask to connect and Wren will show you the prompt.
+  Deny it. If one got connected anyway, it shows in Settings under its own
+  name and certificate and you can disconnect it. It cannot erase while the
+  action is Lock. Any app can lock Wren at any time with a broadcast, as in
+  Molly.
 - Lock refuses to run during an app migration or a device transfer.
 - A trigger needs the phone to be on and the trigger app to run. It does
   nothing if the phone is off, and it cannot reach a Wren that was already

@@ -204,6 +204,12 @@ passphrase is rejected, so the real passphrase path is the one Molly wrote.
 Wren refuses to save a duress passphrase equal to the real one and refuses
 to change the real one into the duress one
 (`ChangePassphraseDialogFragment.java`, `DuressPassphraseDialogFragment.kt`).
+The change dialog verifies the old passphrase before it compares the new one
+with the duress verifier, so it is not an oracle for the duress passphrase.
+With the lock on and no duress passphrase set, every rejection runs a decoy
+derivation with the lock's own KDF parameters and KeyStore HMAC against a
+random stored verifier (`DuressCheck.kt`, `DuressManager.runDecoy`), so the
+time a rejection takes is the same whether or not one is set.
 Turning the passphrase lock off clears the duress passphrase and deletes its
 KeyStore key (`PrivacySettingsViewModel.kt`).
 
@@ -211,6 +217,8 @@ The settings file `wren-duress` is ordinary
 SharedPreferences, not encrypted with the master secret, so anyone who can
 read Wren's data directory can see that a duress passphrase, a failed-attempt
 limit and a panic trigger are configured. They cannot see the passphrase.
+None of the wipe or lock paths log their cause to logcat, which survives the
+wipe.
 The check fails closed against accidents: if the duress check throws, the
 attempt counts as an ordinary wrong passphrase and nothing is wiped. It does
 not help if the attacker imaged the phone before you typed it, and a fresh
@@ -218,19 +226,23 @@ install after a wipe looks like what it is.
 
 ### Wipe after N failed unlocks (Wren)
 
-After 5, 10 or 20 wrong passphrases in a row, Wren wipes. The
-count is stored on disk, so killing the app between guesses does not reset it
-(`FailedAttemptPolicy.kt`, `DuressManager.onWrongPassphrase`, both under the
-Wren duress folder).
+After 5, 10 or 20 wrong passphrases in a row, Wren wipes. Each
+attempt is counted and the count is synced to disk before the KDF runs
+(`DuressManager.onAttemptStarting`, `UnlockAttempts.kt`,
+`FailedAttemptPolicy.kt`), and a right passphrase sets it back to 0. Killing
+the app during the check leaves the attempt counted, and a count that already
+reached the limit wipes at the next attempt.
 
-Only an attempt that reaches the passphrase check is
-counted: wrong fingerprints are not, and neither is a KeyStore failure
-(`UnrecoverableKeyException` in `PassphrasePromptActivity.java`). The counter
-is a plain preference, so root can reset it. If Android refuses to write the
-counter, `DuressStore.commit` throws, `DuressManager` logs it and the guess
-goes uncounted; the protection stops applying rather than the app wiping on a
-storage error. It is off by default, and with the passphrase lock off there is
-no prompt for it to count.
+Every passphrase entry is counted: the lock screen, the re-auth prompt, and
+changing or turning off the passphrase. Wrong fingerprints are not. A
+KeyStore failure (`UnrecoverableKeyException`) stays counted, since the count
+is taken before the check. The count and the inactivity baseline live in
+`no_backup/wren-guard-state` (`GuardStateFile.kt`), which adb backup on
+Android 8.1 to 11 does not copy, so restoring an old backup cannot reset
+them. It is a plain file, so root can. If the count cannot be saved, the
+attempt is refused rather than allowed through uncounted. It is off by
+default, and with the passphrase lock off there is no prompt for it to
+count.
 
 ### PanicKit wipe and the connected-trigger rule (Wren)
 
@@ -243,14 +255,18 @@ fills in only for `startActivityForResult`. Molly's broadcast receiver
 is still registered for triggers that only broadcast; it can lock and never
 erase. [PANIC.md](PANIC.md) walks through the handshake.
 
-The trigger is identified by package name, not by its
-signing certificate. If the trigger app is uninstalled and a different app
-with the same package name is installed, Wren will treat it as the trigger.
-The first app to send CONNECT wins, and Wren shows no confirmation prompt for
-it, because the activity has no UI. The safeguard is that CONNECT can never
-arm Erase: the user has to switch the action in Settings after seeing which
-app is connected. Any app can still lock Wren with the broadcast, which is a
-nuisance and nothing worse, and that was already true in Molly.
+The trigger is identified by package name and the SHA-256
+of its current signing certificate, stored when the user allows it in
+`PanicConnectActivity.kt` and compared on every TRIGGER, CONNECT and
+DISCONNECT (`PanicDecision.checkCaller`, `SigningCertificates.kt`). A
+different app installed under the same package name, or a caller whose
+certificate cannot be read, gets a lock at most and the stored trigger is
+dropped. A trigger that rotates its signing key is dropped the same way and
+has to be connected again. CONNECT always shows a confirmation with the
+package name and the certificate, and it can never arm Erase: the user has to
+switch the action in Settings after seeing which app is connected. Any app
+can still lock Wren with the broadcast, which is a nuisance and nothing worse,
+and that was already true in Molly.
 
 ### Screen security (Molly)
 
@@ -379,8 +395,12 @@ could matter.
   attachment files are encrypted to a key that no longer exists. That covers
   what is keyed from the KeyStore-sealed secrets
   (`app/src/main/java/org/thoughtcrime/securesms/crypto/DatabaseSecretProvider.java`).
-  It does not cover anything Wren wrote to disk unencrypted, such as the
-  allow-listed preferences and the `wren-duress` file.
+  The database and attachment secrets are sealed by the KeyStore whether or
+  not the passphrase lock is on. It does not cover anything Wren wrote to
+  disk unencrypted, such as the allow-listed preferences, the `wren-duress`
+  file and `no_backup/wren-guard-state`, and it does not cover exports. An
+  export interrupted by a wipe stays in the chosen folder as
+  `.<name>.partial`.
 - A copy made before the wipe. If the storage was imaged first, the wipe
   does not touch the image. Its protection is the passphrase and the KeyStore
   key of the phone it came from.

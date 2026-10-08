@@ -48,6 +48,13 @@ The environment variables `CI_APP_TITLE`, `CI_APP_FILENAME`,
 Docker build. Change the package id if you want your own build to install
 next to the official one.
 
+Every build is free of Google push code by default. If you want Firebase
+Cloud Messaging back, build with `-PwrenFcm=true`, set `wrenFcm=true` in
+`app/gradle.properties`, or set `CI_FCM=true` in the environment Gradle runs
+in. The Docker build does not pass `CI_FCM` through, so the release workflow
+always builds without it. [docs/FOSS.md](docs/FOSS.md) explains what the flag
+links in and why Wren's own releases never use it.
+
 ## Which APK to install
 
 Release builds come as four files per flavor. They are the same app, signed
@@ -78,11 +85,21 @@ tools/apk-report.sh app/build/outputs/apk/prodStore/release/*.apk
 
 For each file it prints the size, min and target SDK, ABIs and libraries,
 whether the baseline profile is inside, whether the zip and every 64-bit
-library are 16 KB aligned, and the signature state. It exits non-zero if a
-check fails. An unsigned APK is only a failure with `--require-signed`.
-`libargon2.so` and `libnative-utils.so` come from prebuilt Molly artifacts
-that are still 4 KB aligned, so the ELF check flags them until those are
-rebuilt.
+library are 16 KB aligned, the `google` section and the signature state. It
+exits non-zero if a check fails.
+
+- The `google` lines look for Play Services, Firebase and FCM code, endpoints
+  and manifest entries; [docs/FOSS.md](docs/FOSS.md) lists exactly what they
+  check. A build made with `-PwrenFcm=true` fails them on purpose; pass
+  `--allow-fcm` to have them reported instead.
+- An unsigned APK is only a failure with `--require-signed`.
+- `libargon2.so` and `libnative-utils.so` come from prebuilt Molly artifacts
+  that are still 4 KB aligned, so the ELF check fails on them until those
+  are rebuilt. `--known-4k=libargon2.so,libnative-utils.so` turns those two
+  into warnings and keeps failing on any other library. The release workflow
+  runs the report on the universal APKs with that flag, plus
+  `--require-signed` when it signs, so everything else still blocks a
+  release.
 
 ## A reproducible build in Docker
 

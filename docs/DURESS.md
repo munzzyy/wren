@@ -21,7 +21,12 @@ moment, then deletes everything it keeps on the phone and closes. When you open 
 
 Turn it on under Data at rest > Duress passphrase. Wren refuses a duress
 passphrase that matches your real one, and it refuses to change your real
-passphrase to one that matches your duress passphrase.
+passphrase to one that matches your duress passphrase. The change dialog
+checks your current passphrase before it compares the new one with the duress
+passphrase, so someone holding your unlocked phone can't use it to test
+guesses at the duress passphrase. The duress dialog closes after "this is your
+real passphrase", so testing guesses at the real one there costs a fresh
+passphrase check each time, and that check counts toward the limit below.
 
 How it's stored: I keep a SHA-256 of an Argon2 key derived from the duress
 passphrase with the same cost settings as your real passphrase, and that key
@@ -29,8 +34,12 @@ is also run through an HMAC whose key lives in the Android KeyStore. So a guess
 at the duress passphrase costs as much as a guess at the real one, and copying
 the settings file off the phone is not enough to test guesses offline.
 
-Checking the duress passphrase costs a second key derivation, so a wrong
-passphrase takes about twice as long to be rejected when duress is on.
+Checking the duress passphrase costs a second key derivation. So that the
+time a rejection takes doesn't tell anyone whether a duress passphrase is set,
+Wren runs a second derivation on every wrong passphrase while the lock is on:
+the duress check when there is one, and otherwise a decoy with the same cost
+settings against a random value nothing can match. A wrong passphrase takes
+about twice as long to be rejected either way.
 
 If you use fingerprint or face recognition on top of the passphrase, the duress
 passphrase only fires after the biometric check passes, same as the real one.
@@ -39,8 +48,17 @@ passphrase only fires after the biometric check passes, same as the real one.
 
 Pick Off, 5, 10 or 20. After that many wrong passphrases in a row, Wren wipes
 itself the same way the duress passphrase does. Typing the right passphrase
-resets the count. The count survives restarts, so closing the app between guesses does
-not help an attacker.
+resets the count.
+
+Wren counts each attempt and saves the count before it checks the passphrase.
+Killing the app while the check runs doesn't take the guess back: the attempt
+stays counted as a wrong one, and if that brings the count to the limit, the
+next attempt wipes before it checks anything. If Wren can't save the count
+(say the storage is full), it refuses the attempt instead of letting it
+through uncounted.
+
+The count lives in a file under Android's no_backup folder, so restoring an
+adb backup of Wren doesn't reset it. Root can still edit it.
 
 Be honest with yourself about this one. A kid, a partner or a bored friend
 typing random stuff can trigger it. 10 or 20 is a lot safer than 5 if anyone
@@ -59,11 +77,11 @@ To connect Ripple:
 1. Install Ripple (it's on F-Droid).
 2. Open Ripple, go to its list of apps it can trigger, and turn Wren on.
 3. Wren asks "Let this app trigger Wren's panic action?" and shows the app's
-   name and package name. Check the package name (Ripple's is
-   `info.guardianproject.ripple`) and tap Allow. Deny, back, or tapping
-   outside the box all refuse it.
+   name, package name and the SHA-256 of its signing certificate. Check the
+   package name (Ripple's is `info.guardianproject.ripple`) and tap Allow.
+   Deny, back, or tapping outside the box all refuse it.
 4. Back in Wren, Settings > Privacy > Panic button should now show Ripple as
-   the connected trigger app.
+   the connected trigger app, with the same certificate.
 5. Only now can you switch the panic action to Erase all data, and Wren asks
    for your passphrase before it does.
 
@@ -72,8 +90,15 @@ Some details that matter:
 - No app is ever connected without that confirmation. Android tells Wren
   which app asked (that's why Wren is opened for a result instead of sent a
   broadcast), and that package name is what the confirmation shows and what
-  gets stored. The Allow button ignores taps while another app draws over it,
-  so an overlay can't click it for you.
+  gets stored, together with the certificate digest. The Allow button ignores
+  taps while another app draws over it, so an overlay can't click it for you.
+- Every trigger, connect and disconnect from that package is checked against
+  the stored certificate. An app reinstalled under the same package name with
+  a different signing key gets what any other app gets, a lock at most, and
+  Wren disconnects the trigger. So does a trigger that rotates its own key;
+  connect it again and check the new certificate. A trigger connected before
+  Wren recorded certificates shows as not connected until you connect it
+  again.
 - If the same app is already connected, a repeat connect request returns OK
   without asking again.
 - Only the connected trigger app can erase Wren. Any other app that sends a
@@ -106,8 +131,9 @@ Details:
 - Turning it on, or picking a different number of days, starts the countdown
   from that moment. It can never fire sooner than the number of days you
   picked after you set it.
-- Wren stores the time of your last unlock only while this is on, in its own
-  settings file next to the duress settings. Turning it off deletes that time.
+- Wren stores the time of your last unlock only while this is on, in the same
+  no_backup file as the failed-attempt count, so an adb backup can't roll it
+  back. Turning it off deletes that time.
 - The check runs from an alarm Wren sets for the deadline, and again after a
   reboot, after an app update and whenever the clock is changed. It works
   while Wren is locked. Android may run the alarm a little late when the phone
@@ -151,9 +177,9 @@ The rule is simple: anything that could erase data or weaken a protection.
 Turning the USB lock on does not ask, because it only adds protection.
 
 This is the same check as the lock screen. The passphrase goes through the
-same Argon2 derivation on a background thread. A wrong passphrase counts as a
-failed unlock attempt, so the failed-attempt limit applies here, and typing the
-duress passphrase here erases Wren right away. A right one resets the failed
+same Argon2 derivation on a background thread. The attempt is counted before
+the check, the same way, so the failed-attempt limit applies here, and typing
+the duress passphrase here erases Wren right away. A right one resets the failed
 count and the inactivity countdown. If the screen rotates while the box is
 open, the box closes and nothing happens; you start the action again.
 
@@ -205,21 +231,32 @@ clear all of its app data, the same call Signal uses when you delete your
 account. If Android refuses, Wren deletes its databases, settings, files and
 caches itself and exits.
 
+Wren doesn't log why it wiped or locked. The system log (logcat) lives outside
+Wren's storage and survives the wipe, so the duress, failed-attempt,
+inactivity, panic and USB paths write nothing there that names the cause.
+
 ## What this does not protect against
 
 Read this list. A wipe only removes what is on this phone, inside Wren.
 
 - Backups and exports outside the app. Signal backups you saved to storage, a
   computer or the cloud are not touched. Neither is anything you exported,
-  shared to another app or saved to your gallery.
+  shared to another app or saved to your gallery. An export that was still
+  being written when Wren was wiped or killed stays behind in the folder you
+  picked, under a hidden name that starts with a dot and ends in `.partial`.
+  Delete it yourself; Wren can't, because it no longer exists.
 - Linked devices. Your desktop or tablet still has its copy of your messages.
   Unlink them, or wipe them separately.
 - The other side of every chat. Everyone you talked to still has the messages
   on their phones.
 - Flash storage forensics. Deleting files on flash memory doesn't reliably
   overwrite them. Deleting the KeyStore keys first is what makes leftovers
-  useless, and that only holds as long as the database stayed encrypted with
-  the passphrase lock.
+  useless: the database and attachment secrets are sealed by a KeyStore key
+  whether or not the passphrase lock is on, so leftover database and
+  attachment files can't be decrypted once that key is gone. That does not
+  cover what Wren keeps unencrypted, such as the plaintext preferences (the
+  duress settings file and the failed-attempt file among them), and it does
+  not cover exports.
 - Someone who copies the phone before the wipe. If an attacker images the
   storage first and then makes you type the duress passphrase, they still
   have the encrypted copy. It's protected by your real passphrase and the
