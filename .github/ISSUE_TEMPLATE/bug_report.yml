@@ -1,5 +1,5 @@
 name: "🐛 Bug Report"
-description: "Help us fix issues by providing a detailed report."
+description: "Tell me what broke and how to reproduce it."
 body:
   - type: checkboxes
     id: guidelines
@@ -7,7 +7,7 @@ body:
       label: "Guidelines"
       description: |
         Please check whether this issue has already been reported to avoid duplicates.
-        [Search existing issues](https://github.com/mollyim/mollyim-android/issues?q=is%3Aissue+-type%3AFeature).
+        [Search existing issues](https://github.com/munzzyy/wren/issues?q=is%3Aissue+-type%3AFeature).
       options:
         - label: "Yes, I have searched for existing issues"
           required: true
@@ -31,8 +31,8 @@ body:
     id: app-version
     attributes:
       label: "App Version"
-      description: "Molly app ► Settings ► Help"
-      placeholder: "e.g. v7.21.5-2"
+      description: "Wren app ► Settings ► Help"
+      placeholder: "e.g. v1.0.0"
     validations:
       required: true
   - type: input
@@ -56,7 +56,7 @@ body:
     attributes:
       label: "Link to Debug Log"
       description: |
-        If possible, include a debug log: Molly app ► Settings ► Help ► Debug Log.
+        If possible, include a debug log: Wren app ► Settings ► Help ► Debug Log.
         Copy the generated link here. Logs cover about 24 hours, so capture it soon after the issue occurs.
       placeholder: "e.g. https://debuglogs.org/..."
     validations:

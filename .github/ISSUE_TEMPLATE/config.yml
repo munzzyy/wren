@@ -1,8 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: ❓ Question
-    url: https://matrix.to/#/#mollyim:matrix.org
-    about: Please ask and answer questions in our chat room.
-  - name: 📚 Translation Feedback
-    url: https://hosted.weblate.org/projects/molly-instant-messenger/
-    about: Share feedback on translations.
+  - name: Security vulnerability
+    url: https://github.com/munzzyy/wren/security/advisories/new
+    about: Report security problems privately, not in a public issue.

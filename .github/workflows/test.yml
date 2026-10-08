@@ -9,6 +9,7 @@ on:
       - '**/README*.md'
       - '**/BUILDING.md'
       - '.github/FUNDING.yml'
+      - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
