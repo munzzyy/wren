@@ -6139,6 +6139,36 @@
     <string name="ConversationSettingsFragment__sounds_and_notifications">Sounds &amp; notifications</string>
     <!-- Label for the starred messages option in conversation settings -->
     <string name="ConversationSettingsFragment__starred_messages" translatable="false">Starred messages</string>
+    <!-- Label for the option in chat settings that exports this one chat to a file -->
+    <string name="ConversationSettingsFragment__export_chat">Export chat</string>
+    <!-- Export chat dialog: format choice for a web page that opens in any browser -->
+    <string name="ChatExportDialog__format_html">Web page (HTML)</string>
+    <!-- Export chat dialog: format choice for a plain text file -->
+    <string name="ChatExportDialog__format_text">Plain text</string>
+    <!-- Export chat dialog: format choice for a machine-readable JSON file -->
+    <string name="ChatExportDialog__format_json">JSON</string>
+    <!-- Export chat dialog: checkbox to copy photos, videos, voice messages and files into the export -->
+    <string name="ChatExportDialog__include_media">Include media</string>
+    <!-- Export chat dialog: warning shown under the options -->
+    <string name="ChatExportDialog__warning">The export is not encrypted, and it includes disappearing messages as they are right now.</string>
+    <!-- Export chat dialog: button that opens the system folder picker -->
+    <string name="ChatExportDialog__choose_folder">Choose folder</string>
+    <!-- Toast shown after the export has been queued -->
+    <string name="ChatExportDialog__export_started">Exporting chat. You\'ll get a notification when it\'s done.</string>
+    <!-- Toast shown when no app can pick a folder -->
+    <string name="ChatExportDialog__no_folder_picker">No app on this device can pick a folder.</string>
+    <!-- Progress notification title while a chat is being exported -->
+    <string name="ChatExportJob__exporting_chat">Exporting chat…</string>
+    <!-- Notification title when a chat export is done -->
+    <string name="ChatExportJob__export_finished">Export finished</string>
+    <!-- Notification text when a chat export is done -->
+    <string name="ChatExportJob__tap_to_open_the_folder">Tap to open the folder.</string>
+    <!-- Chooser title for opening the finished export folder -->
+    <string name="ChatExportJob__open_folder">Open folder</string>
+    <!-- Notification title when a chat export failed -->
+    <string name="ChatExportJob__export_failed">Chat export failed</string>
+    <!-- Notification text when a chat export failed -->
+    <string name="ChatExportJob__export_failed_body">The folder could not be written to. Check that it still exists and has free space, then try again.</string>
     <string name="ConversationSettingsFragment__internal_details" translatable="false">Internal details</string>
     <string name="ConversationSettingsFragment__contact_details">Phone contact info</string>
     <string name="ConversationSettingsFragment__view_safety_number">View safety number</string>

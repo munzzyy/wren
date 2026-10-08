@@ -38,6 +38,7 @@ public final class NotificationIds {
   public static final int OUT_OF_REMOTE_STORAGE             = 120500;
   public static final int INITIAL_BACKUP_FAILED             = 120501;
   public static final int MANUAL_BACKUP_NOT_CREATED         = 120502;
+  public static final int CHAT_EXPORT                       = 120600;
 
   private NotificationIds() { }
 
