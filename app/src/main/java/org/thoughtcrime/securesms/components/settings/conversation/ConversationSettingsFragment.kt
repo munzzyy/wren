@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -15,6 +16,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnPreDraw
@@ -27,6 +29,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.flexbox.FlexboxLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import io.github.munzzyy.wren.export.ChatExportDialog
+import io.github.munzzyy.wren.export.ChatExportFormat
+import io.github.munzzyy.wren.export.ChatExportJob
 import io.reactivex.rxjava3.kotlin.subscribeBy
 import kotlinx.coroutines.launch
 import org.signal.core.ui.isSplitPane
@@ -35,6 +40,7 @@ import org.signal.core.ui.util.ThemeUtil
 import org.signal.core.util.DimensionUnit
 import org.signal.core.util.Result
 import org.signal.core.util.concurrent.LifecycleDisposable
+import org.signal.core.util.concurrent.SignalExecutors
 import org.signal.core.util.concurrent.addTo
 import org.signal.core.util.getParcelableArrayListExtraCompat
 import org.signal.core.util.orNull
@@ -132,6 +138,10 @@ private const val REQUEST_CODE_ADD_CONTACT = 2
 private const val REQUEST_CODE_ADD_MEMBERS_TO_GROUP = 3
 private const val REQUEST_CODE_RETURN_FROM_MEDIA = 4
 
+private const val STATE_PENDING_EXPORT_THREAD = "pending_export_thread"
+private const val STATE_PENDING_EXPORT_FORMAT = "pending_export_format"
+private const val STATE_PENDING_EXPORT_MEDIA = "pending_export_media"
+
 /**
  * Settings screen for a conversation.
  *
@@ -189,6 +199,9 @@ class ConversationSettingsFragment :
   private lateinit var addToGroupStoryDelegate: AddToGroupStoryDelegate
   private lateinit var nicknameLauncher: ActivityResultLauncher<NicknameActivity.Args>
 
+  private var pendingExport: PendingExport? = null
+  private val exportFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> onExportFolderChosen(uri) }
+
   private val navController get() = Navigation.findNavController(requireView())
   private val lifecycleDisposable = LifecycleDisposable()
 
@@ -205,6 +218,14 @@ class ConversationSettingsFragment :
     toolbarBadge = view.findViewById(R.id.toolbar_badge)
     toolbarTitle = view.findViewById(R.id.toolbar_title)
     toolbarBackground = view.findViewById(R.id.toolbar_background)
+
+    if (savedInstanceState != null && savedInstanceState.containsKey(STATE_PENDING_EXPORT_THREAD)) {
+      pendingExport = PendingExport(
+        threadId = savedInstanceState.getLong(STATE_PENDING_EXPORT_THREAD),
+        format = ChatExportFormat.valueOf(savedInstanceState.getString(STATE_PENDING_EXPORT_FORMAT, ChatExportFormat.HTML.name)),
+        includeMedia = savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true)
+      )
+    }
 
     val args: ConversationSettingsFragmentArgs = ConversationSettingsFragmentArgs.fromBundle(requireArguments())
     if (args.recipientId != null) {
@@ -229,6 +250,41 @@ class ConversationSettingsFragment :
 
     recyclerView?.addOnScrollListener(ConversationSettingsOnUserScrolledAnimationHelper(toolbarAvatarContainer, toolbarTitle, toolbarBackground))
   }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    pendingExport?.let {
+      outState.putLong(STATE_PENDING_EXPORT_THREAD, it.threadId)
+      outState.putString(STATE_PENDING_EXPORT_FORMAT, it.format.name)
+      outState.putBoolean(STATE_PENDING_EXPORT_MEDIA, it.includeMedia)
+    }
+  }
+
+  private fun startExport(threadId: Long) {
+    ChatExportDialog.show(requireContext()) { format, includeMedia ->
+      pendingExport = PendingExport(threadId, format, includeMedia)
+      try {
+        exportFolderLauncher.launch(null)
+      } catch (e: ActivityNotFoundException) {
+        pendingExport = null
+        Toast.makeText(requireContext(), R.string.ChatExportDialog__no_folder_picker, Toast.LENGTH_LONG).show()
+      }
+    }
+  }
+
+  private fun onExportFolderChosen(treeUri: Uri?) {
+    val export = pendingExport ?: return
+    pendingExport = null
+    if (treeUri == null) return
+
+    val appContext = requireContext().applicationContext
+    SignalExecutors.BOUNDED.execute {
+      ChatExportJob.enqueue(appContext, export.threadId, export.format, export.includeMedia, treeUri)
+    }
+    Toast.makeText(requireContext(), R.string.ChatExportDialog__export_started, Toast.LENGTH_LONG).show()
+  }
+
+  private data class PendingExport(val threadId: Long, val format: ChatExportFormat, val includeMedia: Boolean)
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     when (requestCode) {
@@ -642,6 +698,14 @@ class ConversationSettingsFragment :
           onClick = {
             startActivity(StarredMessagesActivity.createIntent(requireContext(), state.threadId))
           }
+        )
+      }
+
+      if (state.threadId > 0) {
+        clickPref(
+          title = DSLSettingsText.from(R.string.ConversationSettingsFragment__export_chat),
+          icon = DSLSettingsIcon.from(CoreUiR.drawable.symbol_save_android_24),
+          onClick = { startExport(state.threadId) }
         )
       }
 
