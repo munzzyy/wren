@@ -230,6 +230,7 @@ fun SignalTheme(
   val context = LocalContext.current
   val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
   val dynamicColors = maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
+  val pureBlack = isDarkMode && isThemePureBlack(context)
 
   // MOLLY: Apply dynamic color if supported and enabled:
   // - API 34+: Use Compose's built-in dynamic scheme (matches system Material You).
@@ -247,9 +248,10 @@ fun SignalTheme(
     }
     isDarkMode -> darkColorScheme
     else -> lightColorScheme
-  }
+  }.let { if (pureBlack) it.toPureBlack() else it }
 
   val extendedColors = extendedColors(colorScheme, isDarkMode = isDarkMode, isDynamic = dynamicColors)
+    .let { if (pureBlack) it.toPureBlack(colorScheme) else it }
   val snackbarColors = snackbarColors(colorScheme, isDarkMode = isDarkMode, isDynamic = dynamicColors)
 
   ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
@@ -344,6 +346,36 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
   val typedValue = TypedValue()
   return theme.resolveAttribute(R.attr.dynamic_colors, typedValue, false)
     && typedValue.data != 0
+}
+
+private fun isThemePureBlack(context: Context): Boolean {
+  val typedValue = TypedValue()
+  return context.theme.resolveAttribute(R.attr.pure_black, typedValue, false) && typedValue.data != 0
+}
+
+private fun ColorScheme.toPureBlack(): ColorScheme {
+  return copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF0A0A0A),
+    surfaceContainer = Color(0xFF121212),
+    surfaceContainerHigh = Color(0xFF1A1A1A),
+    surfaceContainerHighest = Color(0xFF222222),
+    surfaceBright = Color(0xFF2A2A2A),
+    surfaceVariant = Color(0xFF1E1E1E)
+  )
+}
+
+private fun ExtendedColors.toPureBlack(colorScheme: ColorScheme): ExtendedColors {
+  return copy(
+    colorSurface1 = colorScheme.surfaceContainerLow,
+    colorSurface2 = colorScheme.surfaceContainer,
+    colorSurface3 = colorScheme.surfaceContainerHigh,
+    colorSurface4 = colorScheme.surfaceContainerHighest,
+    colorSurface5 = colorScheme.surfaceBright
+  )
 }
 
 private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean): ExtendedColors {

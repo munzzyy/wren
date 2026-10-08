@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatDelegate;
 
 import com.google.android.material.color.DynamicColors;
 
+import io.github.munzzyy.wren.theme.BlackTheme;
+
 import org.signal.core.ui.util.ThemeUtil;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.R;
@@ -37,6 +39,7 @@ public class DynamicTheme {
     globalNightModeConfiguration   = onCreateNightModeConfiguration;
 
     activity.setTheme(getTheme(activity));
+    BlackTheme.applyIfSelected(activity);
 
     if (previousGlobalConfiguration != globalNightModeConfiguration) {
       Log.d(TAG, "Previous night mode has changed previous: " + previousGlobalConfiguration + " now: " + globalNightModeConfiguration);
@@ -74,6 +77,9 @@ public class DynamicTheme {
   public static @ColorInt int resolveColor(@NonNull Context context, int colorRef) {
     int resId = useDynamicColors(context) ? dynamicTheme : regularTheme;
     ContextThemeWrapper themeWrapper = new ContextThemeWrapper(context, resId);
+    if (BlackTheme.isSelected(context)) {
+      BlackTheme.applyTo(themeWrapper.getTheme());
+    }
     return ThemeUtil.getThemedColor(context, colorRef, themeWrapper.getTheme());
   }
 
@@ -107,7 +113,7 @@ public class DynamicTheme {
     if (theme == Theme.SYSTEM && systemThemeAvailable()) {
       return isSystemInDarkTheme(context);
     } else {
-      return theme == Theme.DARK;
+      return theme == Theme.DARK || theme == Theme.BLACK;
     }
   }
 

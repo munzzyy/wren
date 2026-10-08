@@ -528,6 +528,7 @@ object AccountDataArchiveProcessor {
       SettingsValues.Theme.SYSTEM -> AccountData.AppTheme.SYSTEM
       SettingsValues.Theme.LIGHT -> AccountData.AppTheme.LIGHT
       SettingsValues.Theme.DARK -> AccountData.AppTheme.DARK
+      SettingsValues.Theme.BLACK -> AccountData.AppTheme.DARK
     }
   }
 

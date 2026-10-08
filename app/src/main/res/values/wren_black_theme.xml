@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="ThemeOverlay.Wren.Black" parent="">
+        <item name="pure_black">true</item>
+        <item name="android:colorBackground">@color/wren_black_background</item>
+        <item name="colorSurface">@color/wren_black_background</item>
+        <item name="colorSurfaceDim">@color/wren_black_background</item>
+        <item name="colorSurfaceContainerLowest">@color/wren_black_background</item>
+        <item name="colorSurfaceContainerLow">@color/wren_black_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/wren_black_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/wren_black_surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/wren_black_surface_container_highest</item>
+        <item name="colorSurfaceBright">@color/wren_black_surface_bright</item>
+        <item name="colorSurfaceVariant">@color/wren_black_surface_variant</item>
+        <item name="android:statusBarColor">@color/wren_black_background</item>
+        <item name="android:navigationBarColor">@color/wren_black_background</item>
+        <item name="navbar_container_color">@color/wren_black_surface_container</item>
+        <item name="context_menu_container_color">@color/wren_black_surface_container_high</item>
+        <item name="filled_tonal_icon_button_container_color">@color/wren_black_surface_container_highest</item>
+        <item name="message_request_bar_background_normal">@color/wren_black_surface_container_high</item>
+        <item name="bottomSheetDialogTheme">@style/Theme.Wren.Black.BottomSheetDialog</item>
+    </style>
+
+    <style name="Theme.Wren.Black.BottomSheetDialog" parent="Theme.Signal.BottomSheetDialog">
+        <item name="pure_black">true</item>
+        <item name="android:colorBackground">@color/wren_black_background</item>
+        <item name="colorSurface">@color/wren_black_background</item>
+        <item name="colorSurfaceDim">@color/wren_black_background</item>
+        <item name="colorSurfaceContainerLowest">@color/wren_black_background</item>
+        <item name="colorSurfaceContainerLow">@color/wren_black_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/wren_black_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/wren_black_surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/wren_black_surface_container_highest</item>
+        <item name="colorSurfaceBright">@color/wren_black_surface_bright</item>
+        <item name="colorSurfaceVariant">@color/wren_black_surface_variant</item>
+    </style>
+
+    <style name="Theme.Wren.Starting.Black" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/wren_black_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+
+</resources>

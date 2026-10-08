@@ -98,6 +98,7 @@ import org.thoughtcrime.securesms.banner.banners.DeprecatedBuildBanner;
 import org.thoughtcrime.securesms.banner.banners.DeprecatedSdkBanner;
 import org.thoughtcrime.securesms.banner.banners.DozeBanner;
 import org.thoughtcrime.securesms.banner.banners.OutdatedBuildBanner;
+import org.thoughtcrime.securesms.banner.banners.SecurityPatchBanner;
 import org.thoughtcrime.securesms.banner.banners.ServiceOutageBanner;
 import org.thoughtcrime.securesms.banner.banners.UnauthorizedBanner;
 import org.thoughtcrime.securesms.banner.banners.UsernameOutOfSyncBanner;
@@ -792,6 +793,7 @@ public class ConversationListFragment extends MainFragment implements Conversati
         new ServiceOutageBanner(requireContext()),
         new OutdatedBuildBanner(),
         new DozeBanner(requireContext()),
+        new SecurityPatchBanner(requireContext()),
         new CdsTemporaryErrorBanner(getChildFragmentManager()),
         new CdsPermanentErrorBanner(getChildFragmentManager()),
         new UsernameOutOfSyncBanner((usernameSyncState) -> {
