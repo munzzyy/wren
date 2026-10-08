@@ -31,6 +31,8 @@ import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 
+import io.github.munzzyy.wren.theme.BlackTheme;
+
 import net.zetetic.database.Logger;
 
 import org.conscrypt.ConscryptSignal;
@@ -192,6 +194,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
     SqlCipherLibraryLoader.load();
     EventBus.builder().logNoSubscriberMessages(false).installDefaultEventBus();
     DynamicTheme.setDefaultDayNightMode(this);
+    registerActivityLifecycleCallbacks(BlackTheme.ActivityCallbacks.INSTANCE);
     ScreenLockController.enableAutoLock(TextSecurePreferences.isBiometricScreenLockEnabled(this));
     AppDependencies.installDependencyProviders();
 

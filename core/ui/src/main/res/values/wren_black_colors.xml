@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="wren_black_background">#000000</color>
+    <color name="wren_black_surface_container_low">#0A0A0A</color>
+    <color name="wren_black_surface_container">#121212</color>
+    <color name="wren_black_surface_container_high">#1A1A1A</color>
+    <color name="wren_black_surface_container_highest">#222222</color>
+    <color name="wren_black_surface_bright">#2A2A2A</color>
+    <color name="wren_black_surface_variant">#1E1E1E</color>
+</resources>
