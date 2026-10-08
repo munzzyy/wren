@@ -50,3 +50,50 @@ Conflicts:
 
 No database migrations in this range. Every Wren change from `main` still applies in reverse
 against the merged tree.
+
+Fixes after the merge, in their own commits:
+
+- Signal moved `ForegroundServiceUtil` and `UnableToStartException` into core/util. Wren's export
+  notifications and Molly's `WipeMemoryService` import them from there now.
+- `LinkDeviceRepository.removeDevice` became a suspend function. Molly's MollySocket code calls it
+  from the UnifiedPush job thread, so it blocks on it there.
+- Signal's new `AppRegistrationStorageController` called `resetNetwork()`; Molly's takes a
+  `restartMessageObserver` argument, and `true` does what Signal's two calls did.
+- Molly declares `src/testShared` only as a Kotlin source dir, so javac never compiled the one Java
+  file in it. Signal's new `SignalStoreRule` needs it; the test and androidTest source sets list it
+  as a Java dir too.
+- Signal's new `AppRegistrationStorageControllerTest` writes through `TextSecurePreferences`, which
+  Molly encrypts with the master secret. The test now points those preferences at a plain in-memory
+  file.
+
+## Where this stops: v8.21.x and later
+
+Signal 8.21.6 needs libsignal 0.99.1 and RingRTC 2.70.0, and every later minor needs newer ones
+(8.29.4 asks for libsignal 0.102.2 and RingRTC 2.72.0). Molly ships its own builds of both, and as
+of 2026-10-08 its newest published ones are `im.molly:libsignal-android:0.97.3-1` and
+`im.molly:ringrtc-android:2.69.7-1`. Nothing newer is on Molly's Cloudsmith repositories.
+
+Molly's forks are not cosmetic:
+
+- libsignal: `infer_proxy_mode_for_config` always returns `ProxyOnly`, so when a proxy is set the
+  library never falls back to a direct connection. Upstream falls back for proxies it did not set
+  itself.
+- RingRTC: `CallManager.proceed`, `createGroupCall` and `createCallLinkCall` take a
+  `PeerConnection.ProxyInfo`, with matching Rust and WebRTC changes, so calls go through the proxy.
+  Molly's call code passes it, so upstream RingRTC does not even compile against Wren.
+
+So there were three ways past 8.20.5, and I took none of them:
+
+1. Switch to Signal's `org.signal` builds. That drops the proxy-only rule and the call proxy, which
+   would quietly weaken what Molly promises Tor and proxy users.
+2. Merge 8.21+ while staying on libsignal 0.97.3-1 and RingRTC 2.69.7-1. Signal's libsignal bumps
+   in 8.21 change no app code, but the RingRTC 2.70.0 bump does, and running newer Signal code on
+   native libraries it was never tested with is a guess, not a merge.
+3. Build Molly's forks myself. libsignal needs rustup with the Android targets (this machine has
+   only the system cargo) or Molly's Docker builder; RingRTC needs depot_tools and a full WebRTC
+   checkout, which this machine does not have. Pulling and running those toolchains is new code
+   execution and needs its own go-ahead.
+
+The next merge can start the day Molly publishes `libsignal-android:0.99.1-1` and
+`ringrtc-android:2.70.0-1` (or newer), or once one of the three options above is chosen.
+
