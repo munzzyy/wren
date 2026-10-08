@@ -24,11 +24,13 @@ import java.time.ZoneId
 /**
  * Writes every chat on the phone into one new "Wren export <date>" folder, one subfolder per
  * chat, in the same formats as [ChatExportJob]. A chat that fails is counted and skipped; losing
- * the folder itself or a cancel stops the whole thing and removes what was written.
+ * the folder itself or a cancel stops the whole thing and removes what was written. With a
+ * passphrase that whole folder goes into one encrypted .wrenx file instead.
  */
 class AllChatsExportJob private constructor(
   private val format: ChatExportFormat,
   private val includeMedia: Boolean,
+  private val encrypted: Boolean,
   private val treeUri: String,
   private val releasePermission: Boolean,
   parameters: Parameters
@@ -41,17 +43,19 @@ class AllChatsExportJob private constructor(
 
     private const val KEY_FORMAT = "format"
     private const val KEY_INCLUDE_MEDIA = "include_media"
+    private const val KEY_ENCRYPTED = "encrypted"
 
     private const val TITLE_INTERVAL_MS = 1000L
 
     @WorkerThread
     @JvmStatic
-    fun enqueue(context: Context, format: ChatExportFormat, includeMedia: Boolean, treeUri: Uri) {
-      ExportTreeGrants.take(context, treeUri) { releasePermission ->
-        AppDependencies.jobManager.add(
-          AllChatsExportJob(
+    fun enqueue(context: Context, format: ChatExportFormat, includeMedia: Boolean, treeUri: Uri, passphraseToken: String?) {
+      ExportPassphraseHandoff.enqueue(context, passphraseToken) { passphrase ->
+        ExportTreeGrants.take(context, treeUri) { releasePermission ->
+          val job = AllChatsExportJob(
             format = format,
             includeMedia = includeMedia,
+            encrypted = passphrase != null,
             treeUri = treeUri.toString(),
             releasePermission = releasePermission,
             parameters = Parameters.Builder()
@@ -60,7 +64,9 @@ class AllChatsExportJob private constructor(
               .setLifespan(Parameters.IMMORTAL)
               .build()
           )
-        )
+          passphrase?.handTo(job.id)
+          AppDependencies.jobManager.add(job)
+        }
       }
     }
   }
@@ -71,6 +77,7 @@ class AllChatsExportJob private constructor(
     return JsonJobData.Builder()
       .putString(KEY_FORMAT, format.name)
       .putBoolean(KEY_INCLUDE_MEDIA, includeMedia)
+      .putBoolean(KEY_ENCRYPTED, encrypted)
       .putString(ExportTreeGrants.KEY_TREE_URI, treeUri)
       .putBoolean(ExportTreeGrants.KEY_RELEASE_PERMISSION, releasePermission)
       .serialize()
@@ -85,8 +92,16 @@ class AllChatsExportJob private constructor(
     var notification: NotificationController? = null
     var exportFolder: DocumentFile? = null
     var keepFolder = false
+    val passphrase = if (encrypted) ExportPassphrases.take(id) else null
+    var archive: EncryptedArchive? = null
 
     try {
+      if (encrypted && passphrase == null) {
+        Log.w(TAG, "The passphrase for this encrypted export is gone, not exporting")
+        ExportNotifications.postPassphraseLost(context)
+        return Result.failure()
+      }
+
       notification = ExportNotifications.startProgress(context, context.getString(R.string.AllChatsExportJob__exporting_chats), id)
       notification?.setIndeterminateProgress()
 
@@ -97,8 +112,22 @@ class AllChatsExportJob private constructor(
 
       val threadIds = readThreadIds()
       val zone = ZoneId.systemDefault()
-      val folder = root.createDirectory(ExportFileNames.allChatsFolderName(System.currentTimeMillis(), zone)) ?: throw IOException("Could not create the export folder")
-      exportFolder = folder
+      val exportedAt = System.currentTimeMillis()
+      val folderName = ExportFileNames.allChatsFolderName(exportedAt, zone)
+
+      val chatDestination: (String) -> ChatDestination
+      if (passphrase == null) {
+        val folder = root.createDirectory(folderName) ?: throw IOException("Could not create the export folder")
+        exportFolder = folder
+        chatDestination = { name -> FolderDestination(context, folder.createDirectory(name) ?: throw IOException("Could not create a chat folder")) }
+      } else {
+        ExportSpool.deleteStale(context.cacheDir)
+        val created = EncryptedArchive.create(context, root, folderName, passphrase, exportedAt)
+        archive = created
+        passphrase.fill(0.toChar())
+        created.addFolder(folderName)
+        chatDestination = { name -> created.chatFolder("$folderName/$name") }
+      }
 
       val exporter = ChatExporter(context, format, includeMedia) { isCanceled }
       val usedNames = HashSet<String>()
@@ -123,12 +152,13 @@ class AllChatsExportJob private constructor(
         try {
           exporter.export(
             threadId = threadId,
-            parent = folder,
-            folderName = { chatName -> ExportFileNames.uniqueName(ExportFileNames.sanitizeChatName(chatName), usedNames) },
+            destination = { chatName -> chatDestination(ExportFileNames.uniqueName(ExportFileNames.sanitizeChatName(chatName), usedNames)) },
             onProgress = { _, _ -> }
           )
           tally.written++
         } catch (e: SecurityException) {
+          throw e
+        } catch (e: ArchiveWriteException) {
           throw e
         } catch (e: IOException) {
           Log.w(TAG, "Could not export one chat, moving on", e)
@@ -143,12 +173,14 @@ class AllChatsExportJob private constructor(
 
       when (tally.outcome()) {
         AllChatsTally.Outcome.WROTE_SOME -> {
+          val finishedArchive = archive
+          finishedArchive?.finish()
           keepFolder = true
           ExportNotifications.postFinished(
             context = context,
-            folder = folder,
+            folder = exportFolder ?: root,
             title = context.getString(R.string.ChatExportJob__export_finished),
-            text = summary(tally)
+            text = if (finishedArchive == null) summary(tally) else "${context.getString(R.string.ChatExportJob__saved_encrypted_as_s, finishedArchive.file.name.orEmpty())} ${summary(tally)}"
           )
         }
         AllChatsTally.Outcome.NOTHING_TO_EXPORT -> {
@@ -180,15 +212,18 @@ class AllChatsExportJob private constructor(
       postFailedNotification()
       return Result.failure()
     } finally {
+      passphrase?.fill(0.toChar())
       notification?.close()
       if (!keepFolder) {
         exportFolder?.let { if (!it.delete()) Log.w(TAG, "Could not delete the partial export") }
+        archive?.closeAndDelete()
       }
       ExportTreeGrants.releaseIfUnused(context, treeUri, id, releasePermission)
     }
   }
 
   override fun onFailure() {
+    ExportPassphrases.discard(id)
     if (!started) {
       ExportTreeGrants.onDropped(context, treeUri, id, releasePermission)
     }
@@ -227,6 +262,7 @@ class AllChatsExportJob private constructor(
       return AllChatsExportJob(
         format = ChatExportFormat.valueOf(data.getString(KEY_FORMAT)),
         includeMedia = data.getBoolean(KEY_INCLUDE_MEDIA),
+        encrypted = data.getBooleanOrDefault(KEY_ENCRYPTED, false),
         treeUri = data.getString(ExportTreeGrants.KEY_TREE_URI),
         releasePermission = data.getBoolean(ExportTreeGrants.KEY_RELEASE_PERMISSION),
         parameters = parameters

@@ -6177,6 +6177,20 @@
     <string name="ChatExportDialog__include_media">Include media</string>
     <!-- Export chat dialog: warning shown under the options -->
     <string name="ChatExportDialog__warning">The export is not encrypted, and it includes disappearing messages as they are right now.</string>
+    <!-- Export chat dialog: checkbox that turns the export into one encrypted file -->
+    <string name="ChatExportDialog__encrypt_with_a_passphrase">Encrypt with a passphrase</string>
+    <!-- Export chat dialog: shown under the encrypt checkbox once it is ticked -->
+    <string name="ChatExportDialog__encrypt_explanation">Saves one .wrenx file instead of a folder. Open it on a computer with the wren-export-decrypt tool. Nobody can recover a forgotten passphrase, not even Wren.</string>
+    <!-- Export chat dialog: hint for the passphrase field -->
+    <string name="ChatExportDialog__passphrase">Passphrase</string>
+    <!-- Export chat dialog: hint for the field that repeats the passphrase -->
+    <string name="ChatExportDialog__repeat_passphrase">Repeat passphrase</string>
+    <!-- Export chat dialog: error under a passphrase that is too short. %1$d is the minimum number of characters -->
+    <string name="ChatExportDialog__passphrase_too_short">Use at least %1$d characters. A few random words are easier to type and harder to guess.</string>
+    <!-- Export chat dialog: error when the two passphrase fields differ -->
+    <string name="ChatExportDialog__passphrases_dont_match">The passphrases don\'t match.</string>
+    <!-- Export chat dialog: warning shown under the options when encryption is on -->
+    <string name="ChatExportDialog__warning_encrypted">Anyone with the passphrase can read the file, including disappearing messages as they are right now. The file name and size are not hidden.</string>
     <!-- Export chat dialog: button that opens the system folder picker -->
     <string name="ChatExportDialog__choose_folder">Choose folder</string>
     <!-- Toast shown after the export has been queued -->
@@ -6189,6 +6203,12 @@
     <string name="ChatExportJob__export_finished">Export finished</string>
     <!-- Notification text when a chat export is done -->
     <string name="ChatExportJob__tap_to_open_the_folder">Tap to open the folder.</string>
+    <!-- Notification text when an encrypted export is done. %1$s is the file name, for example "Wren chat 2026-10-08 1403.wrenx" -->
+    <string name="ChatExportJob__saved_encrypted_as_s">Saved as %1$s. Tap to open the folder.</string>
+    <!-- Notification title when an encrypted export could not run because its passphrase was gone -->
+    <string name="ChatExportJob__encrypted_export_stopped">Encrypted export stopped</string>
+    <!-- Notification text when an encrypted export could not run because its passphrase was gone -->
+    <string name="ChatExportJob__passphrase_lost_body">Wren was closed before the export finished, and it never saves your passphrase. Start the export again.</string>
     <!-- Chooser title for opening the finished export folder -->
     <string name="ChatExportJob__open_folder">Open folder</string>
     <!-- Notification title when a chat export failed -->

@@ -32,6 +32,7 @@ import com.google.android.material.snackbar.Snackbar
 import io.github.munzzyy.wren.export.ChatExportDialog
 import io.github.munzzyy.wren.export.ChatExportFormat
 import io.github.munzzyy.wren.export.ChatExportJob
+import io.github.munzzyy.wren.export.ExportPassphrases
 import io.reactivex.rxjava3.kotlin.subscribeBy
 import kotlinx.coroutines.launch
 import org.signal.core.ui.isSplitPane
@@ -141,6 +142,7 @@ private const val REQUEST_CODE_RETURN_FROM_MEDIA = 4
 private const val STATE_PENDING_EXPORT_THREAD = "pending_export_thread"
 private const val STATE_PENDING_EXPORT_FORMAT = "pending_export_format"
 private const val STATE_PENDING_EXPORT_MEDIA = "pending_export_media"
+private const val STATE_PENDING_EXPORT_PASSPHRASE = "pending_export_passphrase_token"
 
 /**
  * Settings screen for a conversation.
@@ -223,7 +225,8 @@ class ConversationSettingsFragment :
       pendingExport = PendingExport(
         threadId = savedInstanceState.getLong(STATE_PENDING_EXPORT_THREAD),
         format = ChatExportFormat.valueOf(savedInstanceState.getString(STATE_PENDING_EXPORT_FORMAT, ChatExportFormat.HTML.name)),
-        includeMedia = savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true)
+        includeMedia = savedInstanceState.getBoolean(STATE_PENDING_EXPORT_MEDIA, true),
+        passphraseToken = savedInstanceState.getString(STATE_PENDING_EXPORT_PASSPHRASE)
       )
     }
 
@@ -257,16 +260,18 @@ class ConversationSettingsFragment :
       outState.putLong(STATE_PENDING_EXPORT_THREAD, it.threadId)
       outState.putString(STATE_PENDING_EXPORT_FORMAT, it.format.name)
       outState.putBoolean(STATE_PENDING_EXPORT_MEDIA, it.includeMedia)
+      outState.putString(STATE_PENDING_EXPORT_PASSPHRASE, it.passphraseToken)
     }
   }
 
   private fun startExport(threadId: Long) {
-    ChatExportDialog.show(requireContext()) { format, includeMedia ->
-      pendingExport = PendingExport(threadId, format, includeMedia)
+    ChatExportDialog.show(requireContext()) { format, includeMedia, passphraseToken ->
+      pendingExport = PendingExport(threadId, format, includeMedia, passphraseToken)
       try {
         exportFolderLauncher.launch(null)
       } catch (e: ActivityNotFoundException) {
         pendingExport = null
+        passphraseToken?.let { ExportPassphrases.discard(it) }
         Toast.makeText(requireContext(), R.string.ChatExportDialog__no_folder_picker, Toast.LENGTH_LONG).show()
       }
     }
@@ -275,16 +280,19 @@ class ConversationSettingsFragment :
   private fun onExportFolderChosen(treeUri: Uri?) {
     val export = pendingExport ?: return
     pendingExport = null
-    if (treeUri == null) return
+    if (treeUri == null) {
+      export.passphraseToken?.let { ExportPassphrases.discard(it) }
+      return
+    }
 
     val appContext = requireContext().applicationContext
     SignalExecutors.BOUNDED.execute {
-      ChatExportJob.enqueue(appContext, export.threadId, export.format, export.includeMedia, treeUri)
+      ChatExportJob.enqueue(appContext, export.threadId, export.format, export.includeMedia, treeUri, export.passphraseToken)
     }
     Toast.makeText(requireContext(), R.string.ChatExportDialog__export_started, Toast.LENGTH_LONG).show()
   }
 
-  private data class PendingExport(val threadId: Long, val format: ChatExportFormat, val includeMedia: Boolean)
+  private data class PendingExport(val threadId: Long, val format: ChatExportFormat, val includeMedia: Boolean, val passphraseToken: String?)
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     when (requestCode) {
