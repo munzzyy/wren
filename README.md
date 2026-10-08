@@ -11,7 +11,8 @@ Wren is a hardened Signal client for Android. It is a fork of
 servers, so your contacts, groups and calls stay exactly where they are.
 
 Molly adds a passphrase lock for the database, a RAM wiper, automatic locking,
-UnifiedPush, Tor and SOCKS support, and a build with no Google code. Wren
+UnifiedPush, Tor and SOCKS support, and a build that needs no Google Play
+services. Wren
 keeps all of that and adds the things people have asked Signal and Molly for
 and never got.
 
@@ -26,8 +27,8 @@ Wipe after wrong unlocks. Five, ten or twenty failed passphrase attempts and
 the data is gone.
 
 Export any chat. One chat, as HTML you can open in a browser, plain text, or
-JSON, with the photos, voice notes and files next to it. Signal only offers a
-full backup in its own format.
+JSON, with the photos, voice notes and files next to it. Signal can only dump
+every chat at once as JSON, behind a feature flag.
 
 A pure black theme. Dark theme with true black backgrounds for OLED screens,
 asked for on Molly's tracker for years. Settings, Appearance, Theme, Black.
@@ -56,12 +57,12 @@ sums and the signing fingerprint written here the same day.
 | RAM wiper, automatic lock | no | yes | yes |
 | UnifiedPush (no Google push) | no | yes | yes |
 | Tor and SOCKS proxy | no | yes | yes |
-| Build without Google code | no | yes | yes |
-| Reproducible builds | yes | yes | yes |
+| Runs without Google Play services | no | yes | yes |
+| Reproducible builds | yes | yes | set up, first check at the first release |
 | Duress passphrase that wipes | no | no | yes |
 | Wipe after N failed unlocks | no | no | yes |
-| PanicKit responder | lock only | lock only | lock or wipe |
-| Export one chat to HTML, text or JSON | no | no | yes |
+| PanicKit responder | no | lock only | lock or wipe |
+| Export one chat to HTML, text or JSON | JSON of all chats, flag-gated | no | yes |
 | Export all chats at once | no | no | yes |
 | Pure black OLED theme | no | no | yes |
 | Device check with one-tap hardened defaults | no | no | yes |
@@ -83,9 +84,10 @@ Desktop, [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
 iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   Signal iOS. Honest status: without an Apple developer account there is no
   App Store, no TestFlight and no push notifications, because Apple ties
-  pushes to Signal's own bundle id. It builds, it can be sideloaded for seven
-  days at a time with a free Apple ID, and it only receives messages while
-  open. That repository explains the limits and what changes the day an
+  pushes to Signal's own bundle id. Nothing has been compiled yet: the repo
+  is a rebrand plus a CI recipe for an unsigned IPA that can be sideloaded
+  for seven days at a time with a free Apple ID, and such a build only
+  receives messages while open. That repository explains the limits and what changes the day an
   account exists.
 
 ## Install
@@ -96,7 +98,7 @@ Nothing to install yet. When the first release is out:
   and check the SHA-256 sum. Each release carries one file per CPU type
   (`arm64-v8a` for almost every phone made since 2017, `armeabi-v7a` for old
   32-bit phones, `x86_64` for emulators and some tablets) and a universal file
-  that holds all three. The per-CPU file is about 80 MB, the universal 124 MB.
+  that holds all three. Sizes are in [BUILDING.md](BUILDING.md).
 - Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
   and let it track releases. Set its APK filter to `arm64-v8a` so it picks the
   right file.
@@ -188,8 +190,8 @@ means either rebuilding those forks for the newer versions, or using Signal's
 own builds and giving up the call proxy. I am not making that trade quietly;
 it is written here so you can see it.
 
-A daily workflow fetches both upstreams and opens an issue the moment Molly
-moves, with the exact commit range and the version gap, so the lag is always
+A daily workflow fetches both upstreams and opens an issue within a day of
+Molly moving, with the exact commit range and the version gap, so the lag is always
 public. `tools/merge-molly.sh` does a Molly merge and reruns the rebrand.
 
 ## Build it yourself
@@ -208,8 +210,8 @@ check a release against the source.
 
 Molly's build takes the app name and package id from `app/gradle.properties`,
 which is what makes Wren possible without touching thousands of files. After
-every merge, `tools/rebrand.py` rewrites the app name in all 135 string
-resource files and leaves MollySocket alone.
+every merge, `tools/rebrand.py` rewrites the app name in every string
+resource file and leaves MollySocket alone.
 
 ## Questions people ask
 
@@ -219,17 +221,19 @@ behaves the same way Molly does on the network and uses no Signal branding.
 Read the [Signal Terms](https://signal.org/legal/) before you register.
 
 Why not just add this to Molly? Molly's tracker has asked for a duress
-password since 2023. I wanted it on my own phone this year, and a fork is how
-you get there. Fixes that belong upstream go upstream.
+password ([issue #487](https://github.com/mollyim/mollyim-android/issues/487),
+with a pull request still open). I wanted it on my own phone this year, and a
+fork is how you get there. Fixes that belong upstream go upstream.
 
 Can I run Wren next to Signal or Molly? Yes, with a different number, or
 as a linked device of the same account.
 
-Which version should I install? Wren is built without Google code, like
-Molly-FOSS. Push notifications come over a WebSocket or UnifiedPush.
+Which version should I install? There is one build. It does not need Google
+Play services and has no Google analytics or tracking; the Firebase client
+stubs Molly carries are present and unused without Play services. Push notifications come over a WebSocket or UnifiedPush.
 
-Where is the desktop app? There is none. Link Signal Desktop to your
-account the normal way.
+Where is the desktop app? In [munzzyy/wren-desktop](https://github.com/munzzyy/wren-desktop),
+see "Wren on other devices". Plain Signal Desktop links to a Wren account too.
 
 ## Contributing
 

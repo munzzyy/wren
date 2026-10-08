@@ -89,8 +89,8 @@ So there were three ways past 8.20.5, and I took none of them:
 2. Merge 8.21+ while staying on libsignal 0.97.3-1 and RingRTC 2.69.7-1. Signal's libsignal bumps
    in 8.21 change no app code, but the RingRTC 2.70.0 bump does, and running newer Signal code on
    native libraries it was never tested with is a guess, not a merge.
-3. Build Molly's forks myself. libsignal needs rustup with the Android targets (this machine has
-   only the system cargo) or Molly's Docker builder; RingRTC needs depot_tools and a full WebRTC
+3. Build Molly's forks myself. libsignal needs rustup with the Android targets (I have not set that up
+   yet; only the system cargo is here) or Molly's Docker builder; RingRTC needs depot_tools and a full WebRTC
    checkout, which this machine does not have. Pulling and running those toolchains is new code
    execution and needs its own go-ahead.
 
