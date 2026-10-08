@@ -122,4 +122,35 @@ class ExportFileNamesTest {
       assertTrue(result, Regex("^1-1\\.[a-z0-9]{1,8}$").matches(result))
     }
   }
+
+  @Test
+  fun `all chats folder is named after the app and the time`() {
+    val millis = Instant.parse("2026-10-08T14:03:59Z").toEpochMilli()
+    assertEquals("Wren export 2026-10-08 1403", ExportFileNames.allChatsFolderName(millis, ZoneOffset.UTC))
+    assertEquals("Wren export 2026-10-08 0903", ExportFileNames.allChatsFolderName(millis, ZoneId.of("America/Chicago")))
+  }
+
+  @Test
+  fun `unique names count up from two`() {
+    val taken = HashSet<String>()
+    assertEquals("Alice", ExportFileNames.uniqueName("Alice", taken))
+    assertEquals("Alice (2)", ExportFileNames.uniqueName("Alice", taken))
+    assertEquals("Alice (3)", ExportFileNames.uniqueName("Alice", taken))
+    assertEquals("Bob", ExportFileNames.uniqueName("Bob", taken))
+  }
+
+  @Test
+  fun `unique names ignore case`() {
+    val taken = HashSet<String>()
+    assertEquals("alice", ExportFileNames.uniqueName("alice", taken))
+    assertEquals("ALICE (2)", ExportFileNames.uniqueName("ALICE", taken))
+  }
+
+  @Test
+  fun `unique names skip a suffix another chat already uses`() {
+    val taken = HashSet<String>()
+    assertEquals("Alice (2)", ExportFileNames.uniqueName("Alice (2)", taken))
+    assertEquals("Alice", ExportFileNames.uniqueName("Alice", taken))
+    assertEquals("Alice (3)", ExportFileNames.uniqueName("Alice", taken))
+  }
 }

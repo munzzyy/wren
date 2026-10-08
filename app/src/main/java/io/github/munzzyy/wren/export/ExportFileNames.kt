@@ -13,6 +13,7 @@ object ExportFileNames {
   const val MEDIA_FOLDER = "media"
   const val FALLBACK_NAME = "chat"
   const val MAX_NAME_LENGTH = 64
+  const val ALL_CHATS_PREFIX = "Wren export"
 
   private const val FALLBACK_EXTENSION = "bin"
   private val SAFE_EXTENSION = Regex("^[a-z0-9]{1,8}$")
@@ -49,6 +50,24 @@ object ExportFileNames {
   fun folderName(chatName: String?, exportedAtMillis: Long, zone: ZoneId): String {
     val timestamp = FOLDER_TIMESTAMP.format(Instant.ofEpochMilli(exportedAtMillis).atZone(zone))
     return "${sanitizeChatName(chatName)} $timestamp"
+  }
+
+  fun allChatsFolderName(exportedAtMillis: Long, zone: ZoneId): String {
+    return "$ALL_CHATS_PREFIX ${FOLDER_TIMESTAMP.format(Instant.ofEpochMilli(exportedAtMillis).atZone(zone))}"
+  }
+
+  /**
+   * Returns [name], or [name] with " (2)", " (3)" and so on appended, whichever is not in [taken]
+   * yet, and adds it to [taken]. Compared without case, since most storage providers ignore it.
+   */
+  fun uniqueName(name: String, taken: MutableSet<String>): String {
+    var candidate = name
+    var n = 2
+    while (!taken.add(candidate.lowercase(Locale.ROOT))) {
+      candidate = "$name ($n)"
+      n++
+    }
+    return candidate
   }
 
   fun mediaFileName(

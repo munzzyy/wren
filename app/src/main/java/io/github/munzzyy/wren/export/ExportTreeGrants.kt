@@ -25,7 +25,7 @@ internal object ExportTreeGrants {
   private val TAG = Log.tag(ExportTreeGrants::class.java)
 
   private const val FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-  private val EXPORT_JOB_KEYS = setOf(ChatExportJob.KEY)
+  private val EXPORT_JOB_KEYS = setOf(ChatExportJob.KEY, AllChatsExportJob.KEY)
 
   private val lock = Any()
   private val waiting = WaitingExports()

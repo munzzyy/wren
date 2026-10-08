@@ -6169,6 +6169,27 @@
     <string name="ChatExportJob__export_failed">Chat export failed</string>
     <!-- Notification text when a chat export failed -->
     <string name="ChatExportJob__export_failed_body">The folder could not be written to. Check that it still exists and has free space, then try again.</string>
+    <!-- Chats settings: row that exports every chat into one folder -->
+    <string name="ChatsSettingsFragment__export_all_chats">Export all chats</string>
+    <!-- Chats settings: description under the export all chats row -->
+    <string name="ChatsSettingsFragment__export_all_chats_label">Save every chat on this phone as files you can read on a computer. Each chat gets its own folder.</string>
+    <!-- Toast shown after the all chats export has been queued -->
+    <string name="ChatExportDialog__export_all_started">Exporting all chats. You\'ll get a notification when it\'s done.</string>
+    <!-- Progress notification title before the all chats export has counted the chats -->
+    <string name="AllChatsExportJob__exporting_chats">Exporting chats…</string>
+    <!-- Progress notification title during the all chats export. %1$d is the chat being written, %2$d is the number of chats -->
+    <string name="AllChatsExportJob__exporting_chat_d_of_d">Exporting chat %1$d of %2$d…</string>
+    <!-- Notification text when the all chats export is done. %1$d is the number of chats written -->
+    <plurals name="AllChatsExportJob__wrote_d_chats">
+        <item quantity="one">Wrote %1$d chat.</item>
+        <item quantity="other">Wrote %1$d chats.</item>
+    </plurals>
+    <!-- Added after the written count when some chats were left out. %1$d is chats with no messages, %2$d is chats that could not be written -->
+    <string name="AllChatsExportJob__d_skipped_d_failed">Empty chats skipped: %1$d. Failed: %2$d.</string>
+    <!-- Notification text when the all chats export found no messages at all -->
+    <string name="AllChatsExportJob__no_chats_with_messages">None of your chats have messages on this phone, so there was nothing to export.</string>
+    <!-- Notification title when the all chats export failed -->
+    <string name="AllChatsExportJob__export_failed">Export of all chats failed</string>
     <string name="ConversationSettingsFragment__internal_details" translatable="false">Internal details</string>
     <string name="ConversationSettingsFragment__contact_details">Phone contact info</string>
     <string name="ConversationSettingsFragment__view_safety_number">View safety number</string>
