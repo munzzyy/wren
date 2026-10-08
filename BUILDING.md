@@ -1,137 +1,117 @@
-# Building and Self-Signing Wren
+# Building and signing Wren
 
-## Overview
+This is for people who compile things and can look after a signing key. If
+that is not you, wait for a release.
 
-This guide covers building and self-signing Wren. It is for developers and experienced users who are comfortable compiling software and managing signing keys.
+## The short local build
 
-⚠️ **Warning**: Mishandling signing keys can result in security vulnerabilities and compromise the app's integrity. Protect your keys and understand the implications of self-signing your app.
-
-## Security Considerations
-
-- **In-App Updater**: Self-signed apps cannot update automatically via the integrated updater because of differing signatures. You'll need to build and install updates manually, or set up your own private F-Droid repository (beyond this guide's scope).
-
-- **Clean Environment**: Building the app requires a clean and secure environment. Using non-dedicated computers or the cloud is discouraged as it increases the risk of attackers injecting malicious code during the build. Running Reproducible Builds on the same environment used to build the app only verifies that the build is deterministic, not that the build is secure.
-
-- **Offline Signing**: Signing APKs offline with the Android SDK is recommended. For better security, consider keeping your signing key on a smartcard and signing with that.
-
-## Prerequisites
-
-### Install JDK
-
-Install a Java Development Kit (JDK) so you can generate your signing key with `keytool`.
-
-### Generate Your Private Key
-
-Generate a signing private key using:
+You need JDK 21 and the Android SDK (platform 36, build tools 36.0.0). Then:
 
 ```sh
-keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 4096 -validity 10000 -alias my-alias
+git clone https://github.com/munzzyy/wren.git
+cd wren
+export ANDROID_HOME=$HOME/Android/Sdk
+./gradlew :app:assembleProdStoreRelease
 ```
 
-## Building Using GitHub Actions
+The unsigned APK lands in `app/build/outputs/apk/prodStore/release/`. Sign it
+before installing (see below). The debug variant,
+`:app:assembleProdWebsiteDebug`, installs as is.
 
-You can build Wren using GitHub Actions, either with GitHub-hosted public runners or [self-hosted runners](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners).
+The Gradle defaults ask for a 12 GB heap. On a machine with 16 to 24 GB of
+memory, put this in `~/.gradle/gradle.properties` or the build daemon gets
+killed during dexing:
 
-### Steps
+```
+org.gradle.jvmargs=-Xmx7g -XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:hashCode=3
+kotlin.daemon.jvmargs=-Xmx5g
+```
 
-1. **Fork the Repository**: Fork [munzzyy/wren](https://github.com/munzzyy/wren) in GitHub. You can keep your fork private if you prefer, but public repositories get GitHub Actions for free, while private repositories have limited free storage and minutes. For details, see [GitHub's billing information](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions).
-
-2. **Configure Repository Variables**: Customize your build via `Settings > Secrets and Variables > Actions > Variables > Repository variables`. Check the table below for available options.
-
-3. **Tag a Release**: Push a tag that starts with `v` (for example `git tag v1.0.0 && git push origin v1.0.0`) to start the `Release` workflow. To rebuild a tag that already exists, run the workflow by hand under Actions and enter the tag.
-
-4. **Monitor Build Progress**: The build typically takes around 45 minutes.
-
-5. **Download APKs**: Once the workflow finishes, go to Releases in your repository and download the APKs and `SHA256SUMS` listed under "Assets". The release is created as a draft.
-
-6. **Publish Release**: Optionally, publish the release draft to trigger the Reproducible Build workflow.
-
-7. **Sign the APKs**: If you did not configure automatic signing, follow the instructions below on how to [sign the APKs](#signing-the-apks) before installation.
-
-8. **Install the APKs**: After signing, the APKs are ready for installation on Android.
-
-9. **Keep Your Fork Updated**: Periodically sync your repository and then go back to step 3 with a new tag. Follow GitHub's documentation on [syncing a fork](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork). This keeps your app updated.
-
-## Building Using the CLI
-
-If you prefer building Wren locally, these steps are essentially the same as the [Reproducible Build guide](reproducible-builds/README.md). You can customize the build by exporting environment variables or saving them in a `.env` file before running `docker compose`.
-
-### Steps
+Unit tests for the Wren additions:
 
 ```sh
-# Set the release version you want to build
+./gradlew :app:testProdWebsiteDebugUnitTest --tests 'io.github.munzzyy.wren.*'
+```
+
+## Flavors
+
+- `prodStoreRelease` has no in-app updater. GitHub Releases and Obtainium get
+  this one.
+- `prodWebsiteRelease` checks the Wren F-Droid repository for updates.
+- `stagingWebsiteRelease` talks to Signal's staging network, for testing.
+
+`app/gradle.properties` holds the app title, backup file name and package id.
+The environment variables `CI_APP_TITLE`, `CI_APP_FILENAME`,
+`CI_PACKAGE_ID`, `CI_BUILD_VARIANTS` (a regex over the flavors, default
+`prod`) and `CI_FORCE_INTERNAL_USER_FLAG` override them in CI and in the
+Docker build. Change the package id if you want your own build to install
+next to the official one.
+
+## A reproducible build in Docker
+
+This is the same path the release workflow uses, so what you get here should
+match a release byte for byte apart from the signature.
+
+```sh
 export VERSION=v1.0.0
-
-# Clone the source code repository
 git clone https://github.com/munzzyy/wren.git
-
-# Navigate to the reproducible builds directory
 cd wren/reproducible-builds
-
-# Checkout the specific release tag
 git checkout $VERSION
-
-# Customize your build by exporting environment variables if needed
-export CI_APP_TITLE="Wren"
-export CI_PACKAGE_ID="io.github.munzzyy.wren"
-
-# Build the APK using Docker environment
 docker compose up --build
-
-# Optionally, save environment variables in a .env file for future builds
-echo "CI_APP_TITLE=Wren" >> .env
-echo "CI_PACKAGE_ID=io.github.munzzyy.wren" >> .env
-
-# Copy the APKs out under the release names
 ./name-outputs.sh $VERSION built
-
-# Shut down the Docker environment after use
 docker compose down
 ```
 
-The built APKs will be available in the `outputs/apk` directory, and the renamed copies in `built`. Make sure to [sign the APKs](#signing-the-apks) before installation.
+The APKs end up in `outputs/apk` and, renamed to the release names, in
+`built/`. [reproducible-builds/README.md](reproducible-builds/README.md)
+has the comparison step.
 
-## Build Customization
+## Building your own signed Wren with GitHub Actions
 
-| Environment Variable  | Default Value | Description                                      |
-|-----------------------|---------------|--------------------------------------------------|
-| `CI_APP_TITLE`        | Wren          | App title as shown in the UI                     |
-| `CI_APP_FILENAME`     | Wren          | Base filename for APKs and backups               |
-| `CI_PACKAGE_ID`       | io.github.munzzyy.wren | Application ID (change as needed)       |
-| `CI_BUILD_VARIANTS`   | prod          | Regex pattern for building different flavors (must match one of the build flavors) |
-| `CI_FORCE_INTERNAL_USER_FLAG` | false | Enable internal testing extensions               |
+Fork the repository. Public forks get Actions minutes for free. Under
+Settings, Secrets and variables, Actions, you can set the `CI_*` variables
+from the table above, and if you want the workflow to sign for you, three
+secrets:
 
-## Build Flavors
+- `SECRET_KEYSTORE`: your keystore file, base64 encoded (`base64 my-key.jks`).
+- `SECRET_KEYSTORE_ALIAS`: the key alias.
+- `SECRET_KEYSTORE_PASSWORD`: the keystore password.
 
-- `prodStoreRelease`: Production version of Wren without the in-app updater. This is what GitHub Releases and Obtainium get.
-- `prodWebsiteRelease`: Production version of Wren with the in-app updater.
-- `stagingWebsiteRelease`: Testing version of Wren for the Signal staging network.
-
-## Signing the APKs
-
-### Offline Signing
-
-To sign the APKs offline, install the Android SDK and use the `apksigner` tool:
+Push a tag that starts with `v`:
 
 ```sh
-apksigner sign --ks my-release-key.jks --out Wren-$VERSION.apk Wren-unsigned-$VERSION.apk
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-### Automatic Signing via GitHub Actions
+The Release workflow builds in Docker (about 45 minutes), signs if the
+secrets exist, and creates a draft release with the APKs and `SHA256SUMS`.
+Publishing the draft starts the reproducible build check. To rebuild an
+existing tag, run the workflow by hand and enter the tag. To stay current,
+sync your fork and tag again.
 
-Configure automatic signing if you trust GitHub to safeguard your private key.
+Only do this if you trust GitHub with your key. If you do not, leave the
+secrets out, download the unsigned APK and sign it at home.
 
-1. **Encode Keystore File**
+## Signing
 
-   ```sh
-   base64 my-release-key.jks
-   ```
+Make a key once and keep it somewhere safe. If you lose it, nobody can
+update your build in place.
 
-2. **Add Secrets to GitHub**
+```sh
+keytool -genkey -v -keystore my-key.jks -keyalg RSA -keysize 4096 -validity 10000 -alias my-alias
+```
 
-   Go to your repository's `Settings > Secrets > Actions` and add the following secrets:
-   - `SECRET_KEYSTORE`: Paste the base64 encoded content of your keystore file.
-   - `SECRET_KEYSTORE_ALIAS`: Your key alias (e.g., `my-alias`).
-   - `SECRET_KEYSTORE_PASSWORD`: Your keystore password.
+Sign with the SDK's `apksigner`:
 
-Without these secrets the release workflow uploads the unsigned APKs.
+```sh
+apksigner sign --ks my-key.jks --out Wren-$VERSION.apk Wren-unsigned-$VERSION.apk
+```
+
+A self-signed build cannot update from the in-app updater, because the
+signature differs from the official one. Build and install updates yourself,
+or run your own F-Droid repository.
+
+Do your builds on a machine you control. Running the reproducible build on
+the same machine only shows the build is deterministic, not that the machine
+is clean.
