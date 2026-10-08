@@ -279,6 +279,21 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
         summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__erase_if_not_unlocked_summary)
       )
 
+      switchPref(
+        title = DSLSettingsText.from(R.string.PrivacySettingsFragment__lock_on_usb_connection),
+        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__lock_on_usb_connection_summary),
+        isChecked = state.passphraseLock && state.usbLock,
+        isEnabled = state.passphraseLock,
+        onToggle = { isChecked ->
+          if (isChecked) {
+            viewModel.setUsbLockEnabled(true)
+          } else {
+            Reauth.require(this@PrivacySettingsFragment) { viewModel.setUsbLockEnabled(false) }
+          }
+          false
+        }
+      )
+
       dividerPref()
 
       sectionHeaderPref(R.string.PrivacySettingsFragment__panic_button)

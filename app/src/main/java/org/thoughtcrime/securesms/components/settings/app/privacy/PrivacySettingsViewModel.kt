@@ -76,6 +76,11 @@ class PrivacySettingsViewModel(
     refresh()
   }
 
+  fun setUsbLockEnabled(enabled: Boolean) {
+    repository.setUsbLockEnabled(enabled)
+    refresh()
+  }
+
   fun setPanicAction(action: PanicAction) {
     repository.setPanicAction(action)
     refresh()
@@ -121,6 +126,7 @@ class PrivacySettingsViewModel(
       panicAction = repository.panicAction,
       panicTriggerPackage = repository.panicTriggerPackage,
       inactivityWipeDays = repository.inactivityWipeDays,
+      usbLock = repository.isUsbLockEnabled,
       biometricScreenLock = TextSecurePreferences.isBiometricScreenLockEnabled(application),
       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(application),
       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(application),

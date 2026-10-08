@@ -144,6 +144,8 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
+    <string name="PrivacySettingsFragment__lock_on_usb_connection">Lock on USB data connection</string>
+    <string name="PrivacySettingsFragment__lock_on_usb_connection_summary">Lock Wren when the phone starts sharing data over USB, such as file transfer, USB debugging or tethering. Charging does not lock it.</string>
     <string name="ReauthDialogFragment__enter_your_passphrase">Enter your passphrase</string>
     <string name="ReauthDialogFragment__explanation">Confirm it\'s you to continue. A wrong passphrase counts as a failed unlock attempt, and your duress passphrase erases Wren here too.</string>
     <string name="ReauthDialogFragment__checking_passphrase">Checking passphrase…</string>

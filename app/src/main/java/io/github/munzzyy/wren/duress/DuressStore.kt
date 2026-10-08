@@ -24,6 +24,7 @@ class DuressStore(context: Context) {
     private const val PANIC_TRIGGER_PACKAGE = "panic_trigger_package"
     private const val INACTIVITY_WIPE_DAYS = "inactivity_wipe_days"
     private const val LAST_UNLOCK_AT = "last_unlock_at"
+    private const val USB_LOCK = "usb_lock"
   }
 
   private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -131,6 +132,12 @@ class DuressStore(context: Context) {
     get() = prefs.getLong(LAST_UNLOCK_AT, 0L)
     set(value) {
       commit(prefs.edit().putLong(LAST_UNLOCK_AT, value))
+    }
+
+  var usbLockEnabled: Boolean
+    get() = prefs.getBoolean(USB_LOCK, false)
+    set(value) {
+      commit(prefs.edit().putBoolean(USB_LOCK, value))
     }
 
   private fun getBytes(key: String): ByteArray? {
