@@ -24,7 +24,8 @@ if ! python3 tools/rebrand.py --check > /dev/null 2>&1; then
   fail "tools/rebrand.py --check reports strings that still say Molly"
 fi
 
-if hits=$(grep -rnP 'Molly(?!Socket)' app/src/main/res/values*/ 2> /dev/null) && [[ -n $hits ]]; then
+# Theme.Molly.* are style identifiers that code references, not visible text
+if hits=$(grep -rnP '(?<!Theme\.)Molly(?!Socket)' app/src/main/res/values*/ 2> /dev/null) && [[ -n $hits ]]; then
   while IFS= read -r line; do
     fail "Molly in resources: ${line:0:160}"
   done <<< "$hits"
