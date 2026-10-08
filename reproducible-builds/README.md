@@ -21,6 +21,8 @@ Each release has two builds, and each comes signed or unsigned depending on whet
 | `prodStore`, no in-app updater (GitHub, Obtainium) | `Wren-<version>.apk` | `Wren-unsigned-<version>.apk` |
 | `prodWebsite`, with in-app updater | `Wren-website-<version>.apk` | `Wren-website-unsigned-<version>.apk` |
 
+Those names are the universal APKs. Each build also comes once per CPU, with the ABI after the version, for example `Wren-<version>-arm64-v8a.apk`, `Wren-<version>-armeabi-v7a.apk` and `Wren-<version>-x86_64.apk`. Compare whichever one you installed.
+
 `SHA256SUMS` lists the checksum of every APK in the release.
 
 ## Build and Verify

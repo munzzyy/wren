@@ -5,6 +5,8 @@
 # Copies the release APKs from outputs/ into <dest> under the asset names
 # Wren publishes: Wren-<tag>.apk and Wren-unsigned-<tag>.apk for prodStore,
 # Wren-website-<tag>.apk and Wren-website-unsigned-<tag>.apk for prodWebsite.
+# Those are the universal APKs. The per-ABI ones add the ABI after the tag,
+# for example Wren-<tag>-arm64-v8a.apk.
 # Usage: name-outputs.sh <tag> <dest>
 set -euo pipefail
 
@@ -26,7 +28,11 @@ for apk in "$here"/outputs/apk/*/release/*.apk; do
   esac
   unsigned=""
   [[ $apk == *unsigned* ]] && unsigned="-unsigned"
-  cp -v "$apk" "$dest/${base}${infix}${unsigned}-${tag}.apk"
+  abi=""
+  if [[ $(basename "$apk") =~ -(arm64-v8a|armeabi-v7a|x86_64)-release ]]; then
+    abi="-${BASH_REMATCH[1]}"
+  fi
+  cp -v "$apk" "$dest/${base}${infix}${unsigned}-${tag}${abi}.apk"
   count=$((count + 1))
 done
 

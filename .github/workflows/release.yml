@@ -118,8 +118,9 @@ jobs:
             echo
             echo "$state"
             echo
-            echo "Wren-<version>.apk is the build without the in-app updater (GitHub and Obtainium)."
-            echo "Wren-website-<version>.apk is the build with the in-app updater."
+            echo "Wren-<version>.apk is the universal build without the in-app updater (GitHub and Obtainium)."
+            echo "Wren-<version>-arm64-v8a.apk, -armeabi-v7a.apk and -x86_64.apk are the same build for one CPU, a much smaller download."
+            echo "Most phones want arm64-v8a. Wren-website-<version> files are the builds with the in-app updater."
             echo
             echo "SHA-256:"
             echo
@@ -160,16 +161,23 @@ jobs:
       - name: Check version for upgrade compatibility
         run: |
           mkdir latest
-          if ! gh release download --pattern 'Wren-*v*.apk' --dir latest; then
+          name=$(gh release view --json assets --jq '
+            [.assets[].name
+             | select(test("^Wren-(unsigned-)?v.*\\.apk$"))
+             | select(test("-(arm64-v8a|armeabi-v7a|x86_64)\\.apk$") | not)]
+            | sort | .[0] // empty') || name=""
+          if [ -z "$name" ]; then
             echo "No published release to compare with"
             exit 0
           fi
+          gh release download --pattern "$name" --dir latest
           aapt=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           version_code() {
             "$aapt" d badging "$1" | sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p"
           }
           pick() {
-            find "$1" -maxdepth 1 -name 'Wren-*.apk' ! -name '*website*' | sort | head -1
+            find "$1" -maxdepth 1 -name 'Wren-*.apk' ! -name '*website*' \
+              ! -name '*-arm64-v8a.apk' ! -name '*-armeabi-v7a.apk' ! -name '*-x86_64.apk' | sort | head -1
           }
           latest=$(version_code "$(pick latest)")
           build=$(version_code "$(pick dist)")
