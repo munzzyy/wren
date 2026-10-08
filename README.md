@@ -3,6 +3,8 @@
 [![Test](https://github.com/munzzyy/wren/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/wren/actions/workflows/test.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
+<img src="docs/images/icon.png" alt="Wren icon" width="96" align="right">
+
 Wren is a hardened Signal client for Android. It is a fork of
 [Molly](https://github.com/mollyim/mollyim-android), which is a fork of
 [Signal](https://github.com/signalapp/Signal-Android). It talks to Signal's
@@ -87,6 +89,8 @@ Nothing to install yet. When the first release is out:
 
 Wren uses the package id `io.github.munzzyy.wren`, so it installs next to
 Signal and Molly without touching them. Android 8.1 or newer.
+
+![Wren in the app drawer of an Android 16 emulator](docs/images/icon-in-drawer.png)
 
 ## Moving from Signal or Molly
 
