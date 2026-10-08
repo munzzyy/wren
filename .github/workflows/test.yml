@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read # to fetch code (actions/checkout)
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Run tests
@@ -36,10 +40,21 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Copy Docker gradle.properties
-        run: cp gradle.properties.docker "$GRADLE_USER_HOME/gradle.properties"
+        run: |
+          cp gradle.properties.docker "$GRADLE_USER_HOME/gradle.properties"
+          echo 'org.gradle.jvmargs=-Xmx6g -XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:hashCode=3' >> "$GRADLE_USER_HOME/gradle.properties"
 
-      - name: Build and run tests
-        run: ./gradlew build
+      - name: Build the debug app
+        run: ./gradlew --max-workers=2 :app:assembleProdWebsiteDebug
+
+      - name: Run the unit tests
+        run: ./gradlew --max-workers=2 :app:testProdWebsiteDebugUnitTest
+
+      - name: Lint
+        run: ./gradlew --max-workers=2 :app:lintProdWebsiteDebug
+
+      - name: Check the APK
+        run: tools/apk-report.sh --known-4k=libargon2.so,libnative-utils.so app/build/outputs/apk/prodWebsite/debug/app-prod-website-debug.apk
 
       - name: Archive reports for failed build
         if: "failure()"
