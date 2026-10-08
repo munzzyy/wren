@@ -37,13 +37,14 @@ table gives full paths so you can paste them.
 | What runs on lock | `app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java` | `onLock` |
 | RAM wipe | `app/src/main/java/org/thoughtcrime/securesms/service/WipeMemoryService.java` | `doWipe` |
 | Biometric screen lock | `app/src/main/java/org/thoughtcrime/securesms/ScreenLockController.kt` | `onAppBackgrounded`, `shouldLockScreenAtStart` |
-| Duress check and failed-attempt hook | `app/src/main/java/io/github/munzzyy/wren/duress/DuressManager.kt` | `onWrongPassphrase`, `onUnlocked`, `isDuressPassphrase` |
+| Duress check and failed-attempt hook | `app/src/main/java/io/github/munzzyy/wren/duress/DuressManager.kt` | `onAttemptStarting`, `onWrongPassphrase`, `onUnlocked`, `isDuressPassphrase`, `runDecoy` |
 | Duress verifier | `app/src/main/java/io/github/munzzyy/wren/duress/DuressVerifier.kt` | `createVerifier`, `matches` |
-| Duress and panic settings storage | `app/src/main/java/io/github/munzzyy/wren/duress/DuressStore.kt` | the whole file |
-| Unlock limit | `app/src/main/java/io/github/munzzyy/wren/duress/FailedAttemptPolicy.kt` | `onFailedAttempt` |
+| Duress and panic settings storage | `app/src/main/java/io/github/munzzyy/wren/duress/DuressStore.kt`, `app/src/main/java/io/github/munzzyy/wren/duress/GuardStateFile.kt` | the whole files |
+| Unlock limit | `app/src/main/java/io/github/munzzyy/wren/duress/UnlockAttempts.kt`, `app/src/main/java/io/github/munzzyy/wren/duress/FailedAttemptPolicy.kt` | `onStarting`, `onRejected`, `onAttemptStarting`, `onAttemptRejected` |
+| Equal-time rejections | `app/src/main/java/io/github/munzzyy/wren/duress/DuressCheck.kt` | `plan`, `matches` |
 | The wipe | `app/src/main/java/io/github/munzzyy/wren/duress/AppWipe.kt` | `wipeNow`, `deleteKeyStoreEntries`, `deleteLocalFiles` |
 | PanicKit intents | `app/src/main/java/io/github/munzzyy/wren/duress/PanicResponderActivity.kt` | `handleConnect`, `handleDisconnect`, `handleTrigger` |
-| PanicKit decisions | `app/src/main/java/io/github/munzzyy/wren/duress/PanicDecision.kt` | `decide`, `connect`, `isConnectedCaller` |
+| PanicKit decisions | `app/src/main/java/io/github/munzzyy/wren/duress/PanicDecision.kt`, `app/src/main/java/io/github/munzzyy/wren/duress/SigningCertificates.kt` | `checkCaller`, `onTrigger`, `onConnect`, `decide`, `sha256` |
 | Molly's lock-only panic receiver | `app/src/main/java/org/thoughtcrime/securesms/service/PanicResponderListener.kt` | `onReceive` |
 | Settings screens for the above | `app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt` | Data at rest and Panic button sections |
 | Proxy and Orbot | `app/src/main/java/org/thoughtcrime/securesms/net/NetworkManager.java`, `app/src/main/java/org/thoughtcrime/securesms/net/Networking.kt` | `configureProxy`, `socketFactory`, `DUMMY_PROXY` |
@@ -118,9 +119,14 @@ database is SQLCipher keyed with the database secret.
 6. Deletes the previous duress alias, or the new one if the write failed.
 
 `DuressStore` uses plain `SharedPreferences`. The file is not encrypted with
-the master secret, and it also holds `failed_attempt_limit`,
-`failed_attempt_count`, `panic_action` and `panic_trigger_package`. It has to
-be readable at the lock screen, before the master secret exists.
+the master secret, and it also holds `failed_attempt_limit`, `panic_action`,
+`panic_trigger_package`, `panic_trigger_certificate` and the decoy's
+`decoy_salt` and `decoy_verifier`. It has to be readable at the lock screen,
+before the master secret exists. The failed-attempt count and the last unlock
+time are in `no_backup/wren-guard-state` instead (`GuardStateFile.kt`), so an
+adb backup can't roll them back. That file is written to a temp name, synced
+and renamed; on first read the old `failed_attempt_count` and `last_unlock_at`
+preferences are copied into it and removed only after the write.
 
 `DuressVerifier.matches` rejects an empty passphrase, a wrong-length salt or
 a wrong-length verifier before doing any work, derives the verifier and
@@ -138,28 +144,35 @@ In `PassphrasePromptActivity.unlock`:
    `BiometricDialogFragment.authenticate` runs first and the passphrase is
    not looked at until it succeeds. If no biometrics are enrolled any more,
    the biometric lock is switched off and the passphrase is checked.
-2. `SetMasterSecretTask.doInBackground` calls
-   `MasterSecretUtil.getMasterSecret`.
-   - Success: `DuressManager.onUnlocked` resets the failed-attempt counter.
+2. `SetMasterSecretTask.doInBackground` first calls
+   `DuressManager.onAttemptStarting`. It wipes if the stored count already
+   reached the limit, otherwise saves count + 1 and returns true. If the
+   count can't be read or saved it returns false and the passphrase is not
+   checked at all. Only then `MasterSecretUtil.getMasterSecret` runs.
+   - Success: `DuressManager.onUnlocked` resets the count to 0.
    - `InvalidPassphraseException`: `DuressManager.onWrongPassphrase`.
-   - `UnrecoverableKeyException`: logged, not counted, nothing else happens.
-3. `onWrongPassphrase` first runs `isDuressPassphrase`. A match calls
-   `AppWipe.wipeNow` and the method does not return. Otherwise it runs
-   `FailedAttemptPolicy.onFailedAttempt`, saves the new count, and wipes if
-   the limit is reached. A `RuntimeException` while saving is caught and
-   logged, which leaves that guess uncounted.
+   - `UnrecoverableKeyException`: logged; the attempt stays counted.
+3. `onWrongPassphrase` picks a `DuressCheck`: the real duress check when one
+   is set, a decoy derivation when the lock is on without one. A real match
+   calls `AppWipe.wipeNow` and the method does not return; the decoy's
+   result is thrown away. Then `UnlockAttempts.onRejected` wipes if the
+   count, which already includes this attempt, reached the limit.
 
-The few lines Wren added to Molly's prompt and change-passphrase dialog are
-the whole integration. `ChangePassphraseDialogFragment` calls
-`DuressManager.isDuressPassphrase` on the new passphrase so the real one can
-never be changed into the duress one.
+`ReauthDialogFragment` runs the same three calls. In
+`ChangePassphraseDialogFragment` the change and disable modes call
+`onAttemptStarting`, verify the old passphrase with `getMasterSecret`, and
+only then compare the new passphrase with the duress verifier. The change
+reuses that `MasterSecret` through the `changeMasterSecretPassphrase`
+overload that takes one, so the KDF runs once. Comparing first would tell
+anyone with the unlocked phone whether a guess is the duress passphrase.
 
 ## 5. How the wipe works
 
 `AppWipe.wipeNow` in `app/src/main/java/io/github/munzzyy/wren/duress/AppWipe.kt` runs these steps in order, each
 wrapped in `runCatching` so one failure does not stop the next:
 
-1. Logs one warning line.
+1. Writes nothing to the log. Logcat outlives the wipe, and none of the
+   callers log their cause either.
 2. `deleteKeyStoreEntries`: opens the `AndroidKeyStore`, lists every alias the
    app can see and deletes each one. This includes the master secret HMAC
    key, the duress HMAC key and `SignalSecret`, so the sealed database
@@ -227,16 +240,24 @@ Everything is under `app/src/main/java/io/github/munzzyy/wren/export/`.
 - `ChatExporter.kt` creates a new folder under the Storage Access Framework
   tree the user picked (`DocumentFile.createDirectory`), writes the chat file
   and a `media` folder, and deletes the whole folder if the export fails or
-  is canceled. Output is UTF-8.
+  is canceled. Output is UTF-8. The folder, or the `.wrenx` file, is created
+  as `.<name>.partial` (`ExportFileNames.partialName`) and renamed by
+  `ExportFolders.finish` once it is complete, so what a kill or a wipe leaves
+  is plainly unfinished.
 - Folder names come from `ExportFileNames.sanitizeChatName`: control, format,
   surrogate, private-use and unassigned code points are dropped, so are
   `/ \ : * ? " < > |`, runs of whitespace collapse, leading dots and spaces
   are trimmed, the name is capped at 64 code points, and an empty result
   becomes `chat`. `uniqueName` adds ` (2)` for duplicates.
-- Media files are named `<message id>-<index>.<ext>`. The extension must
-  match `^[a-z0-9]{1,8}$`, taken from the original name or the MIME type,
-  else `bin`. Attacker-controlled attachment file names never reach the
-  file system.
+- Media files are named `<message id>-<index>.<ext>`. The extension comes
+  from `ExportFileNames.PASSIVE_TYPES`, a map from passive MIME types to
+  their extensions. The original extension is kept only if it is listed for
+  the attachment's type; any type not on the list gets `bin`. Nothing on the
+  list is html, svg, xml, mht, js or another type a browser runs, and a test
+  pins that. SAF files are created as `application/octet-stream` so the
+  provider doesn't append an extension of its own. Attacker-controlled
+  attachment file names never reach the file system, in a folder or in a
+  `.wrenx` archive.
 - HTML (`HtmlChatExportWriter`): every dynamic value goes through
   `escape()`, which replaces `& < > " '`. The page has a
   `Content-Security-Policy` meta tag with `script-src 'none'`, `object-src 'none'`,
@@ -248,8 +269,13 @@ Everything is under `app/src/main/java/io/github/munzzyy/wren/export/`.
   rewrites.
 - Text (`TextChatExportWriter`): multi-line bodies are indented so a message
   cannot start a fake entry; single-line fields have line breaks replaced.
+  C0 controls other than tab and newline, DEL, C1 and the bidi controls
+  (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069) become U+FFFD
+  (`ChatExportWriter.isUnsafeControl`).
 - JSON (`JsonChatExportWriter`): strings go through kotlinx's
-  `JsonPrimitive(...).toString()`.
+  `JsonPrimitive(...).toString()`. HTML and JSON strip the same characters
+  from names (chat, sender, quote author, reaction author, file name);
+  message bodies stay exact.
 - The "Export all chats" row is behind the same biometric or device-credential
   gate as Signal's other plaintext export
   (`ChatsSettingsFragment.kt`, `plaintextBiometricsAuthentication`), and the
@@ -302,15 +328,32 @@ There are 86. The ones that carry the security claims:
   the constant-time comparator is the one called, key bytes are zeroed.
 - `app/src/test/java/io/github/munzzyy/wren/duress/FailedAttemptPolicyTest.kt`:
   wipes exactly at the limit, off never wipes, bad stored values fall back.
+- `app/src/test/java/io/github/munzzyy/wren/duress/UnlockAttemptsTest.kt`:
+  the attempt is saved before the check, a kill mid-check still counts, a
+  count that can't be read or saved refuses the attempt.
+- `app/src/test/java/io/github/munzzyy/wren/duress/GuardStateFileTest.kt`:
+  round trip, damaged file, the one-time migration and a failed migration
+  that keeps the old values.
+- `app/src/test/java/io/github/munzzyy/wren/duress/DuressCheckTest.kt`: every
+  rejection with the lock on runs exactly one second derivation, and the
+  decoy never matches.
+- `app/src/test/java/io/github/munzzyy/wren/duress/PanicCertificateTest.kt`:
+  a reinstall with another key never wipes and is disconnected, a stored
+  trigger without a key never wipes, the hash and its display format.
 - `app/src/test/java/io/github/munzzyy/wren/export/ChatExportWriterTest.kt`:
   hostile markup in text and attributes, every HTML special character,
   JSON control characters, multi-line text, the CSP tag, and golden output
   for all three formats.
 - `app/src/test/java/io/github/munzzyy/wren/export/ExportFileNamesTest.kt`:
-  path separators, control characters, long and empty names, extensions.
+  path separators, control characters, long and empty names, the passive
+  type list, active types always becoming `bin`, partial names.
+- `app/src/test/java/io/github/munzzyy/wren/export/ExportControlCharactersTest.kt`:
+  every control and bidi character in text, HTML names and JSON names.
 - `app/src/test/java/io/github/munzzyy/wren/devicecheck/HardeningPlanTest.kt`:
   the hardened-defaults plan never touches the passphrase, duress or
   Registration Lock.
+- `app/src/test/java/io/github/munzzyy/wren/devicecheck/DeviceCheckTapTest.kt`:
+  a tap on a row hardens or opens its settings screen, never weakens.
 
 What the tests do not cover: `AppWipe`, `DuressManager`, `DuressStore`,
 `PanicResponderActivity` and the settings screens, because they need a real
@@ -326,15 +369,18 @@ ABI, how many are stored versus compressed, then lines starting `ok` or
 - baseline profile present (not required for debuggable builds);
 - `zipalign -P 16 -v 4` passes;
 - every 64-bit library has LOAD segments aligned to at least 16 KB (32-bit
-  libraries are skipped);
+  libraries are skipped). `--known-4k=a.so,b.so` turns a miss in those named
+  libraries into a `warn` line; any other library still fails;
 - every ABI directory has `libsignal_jni.so`;
 - the signature verifies, and shows the first 16 characters of the signing
   certificate's SHA-256. An unsigned APK prints `unsigned` and only fails with
   `--require-signed`.
 
-It exits 1 if any check failed. I expect the ELF alignment check to flag
-`libargon2.so` and `libnative-utils.so`, which is the known 4 KB alignment gap
-in the README. Any other failure is news.
+It exits 1 if any check failed. Without `--known-4k` I expect the ELF
+alignment check to flag `libargon2.so` and `libnative-utils.so`, which is the
+known 4 KB alignment gap in the README. The release workflow passes
+`--known-4k=libargon2.so,libnative-utils.so`, so those two warn and any other
+failure stops the release.
 
 ## 10. What Wren changed in Molly's files
 
@@ -354,9 +400,9 @@ For the files that matter, that diff is small:
 
 | File | Change |
 | --- | --- |
-| `app/src/main/java/org/thoughtcrime/securesms/PassphrasePromptActivity.java` | Calls `DuressManager.onUnlocked` after a good passphrase and `onWrongPassphrase` after `InvalidPassphraseException`. `UnrecoverableKeyException` is split from it so it is not counted. 8 lines. |
-| `app/src/main/java/org/thoughtcrime/securesms/ChangePassphraseDialogFragment.java` | Rejects a new passphrase equal to the duress one. 12 lines. |
-| `app/src/main/java/org/thoughtcrime/securesms/crypto/MasterSecretUtil.java` | Adds `getKdfParameters` and `hasStrongBoxKeyStore`. No change to the derivation. 8 lines. |
+| `app/src/main/java/org/thoughtcrime/securesms/PassphrasePromptActivity.java` | Calls `DuressManager.onAttemptStarting` before the check, `onUnlocked` after a good passphrase and `onWrongPassphrase` after `InvalidPassphraseException`. |
+| `app/src/main/java/org/thoughtcrime/securesms/ChangePassphraseDialogFragment.java` | Counts the attempt, verifies the old passphrase, then rejects a new passphrase equal to the duress one. |
+| `app/src/main/java/org/thoughtcrime/securesms/crypto/MasterSecretUtil.java` | Adds `getKdfParameters`, `hasStrongBoxKeyStore` and `getKeyStoreAlias`, and makes the `changeMasterSecretPassphrase` overload that takes a `MasterSecret` public. No change to the derivation. |
 | `app/src/main/AndroidManifest.xml` | Adds three components: the export cancel receiver, `DeviceCheckActivity` and `PanicResponderActivity`. Removes nothing. |
 | `app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java` | Registers the black theme's activity callbacks. |
 | `app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java`, `app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java` | Black theme. |

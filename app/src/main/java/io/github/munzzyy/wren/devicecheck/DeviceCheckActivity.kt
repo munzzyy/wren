@@ -97,20 +97,39 @@ class DeviceCheckActivity : PassphraseRequiredActivity() {
       CheckId.REGISTRATION_LOCK -> startActivity(AppSettingsActivity.account(this))
       CheckId.NOTIFICATION_PRIVACY -> startActivity(AppSettingsActivity.notifications(this))
       CheckId.ORBOT -> onOrbotClick()
-      else -> HardenedSetting.forCheck(id)?.let { viewModel.toggle(it) }
+      else -> HardenedSetting.forCheck(id)?.let { onSettingClick(it) }
     }
+  }
+
+  private fun onSettingClick(setting: HardenedSetting) {
+    when (HardeningPlan.onTap(setting, viewModel.state.value.snapshot)) {
+      TapAction.HARDEN -> viewModel.harden(setting)
+      TapAction.OPEN_SETTINGS -> openSettings(setting.screen)
+      TapAction.NONE -> Unit
+    }
+  }
+
+  private fun openSettings(screen: SettingsScreen) {
+    startActivity(
+      when (screen) {
+        SettingsScreen.PRIVACY -> AppSettingsActivity.privacy(this)
+        SettingsScreen.CHATS -> AppSettingsActivity.chats(this)
+        SettingsScreen.NOTIFICATIONS -> AppSettingsActivity.notifications(this)
+        SettingsScreen.PROXY -> AppSettingsActivity.proxy(this)
+      }
+    )
   }
 
   private fun onOrbotClick() {
     if (viewModel.state.value.snapshot.routedThroughOrbot) {
-      startActivity(AppSettingsActivity.proxy(this))
+      openSettings(SettingsScreen.PROXY)
       return
     }
 
     MaterialAlertDialogBuilder(this)
       .setTitle(R.string.DeviceCheck__route_through_orbot_title)
       .setMessage(R.string.DeviceCheck__route_through_orbot_message)
-      .setPositiveButton(R.string.DeviceCheck__route_through_orbot) { _, _ -> viewModel.toggle(HardenedSetting.ORBOT) }
+      .setPositiveButton(R.string.DeviceCheck__route_through_orbot) { _, _ -> viewModel.harden(HardenedSetting.ORBOT) }
       .setNegativeButton(android.R.string.cancel, null)
       .show()
   }

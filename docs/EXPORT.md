@@ -20,7 +20,20 @@ for example `Alice 2026-10-08 1403`. Inside it:
 - `media/` with the attachments, if you asked for media
 
 Media files are named `<message id>-<n>.<ext>`, so two photos called `image.jpg` never overwrite
-each other.
+each other. The extension comes from the attachment's type, and only from a short list of types
+a browser or file manager just shows or plays: photos (jpg, png, gif, webp, heic and a few
+more), video (mp4, 3gp, webm, mov), audio (m4a, aac, mp3, ogg, opus, wav, flac, amr), pdf, txt
+and vcf. The original extension is kept only when it belongs to that same type, so `Holiday.JPEG`
+sent as a JPEG stays `.jpeg`. Anything else, including a file that claims to be a photo but is
+really a web page or an SVG, is saved as `.bin`. That way nothing in `media/` can open as a page
+or run a script next to `chat.html`. Wren creates the files as plain binary data so the storage
+provider doesn't add an extension of its own.
+
+While an export is being written, its folder (or its `.wrenx` file) has a hidden name that starts
+with a dot and ends in `.partial`, for example `.Alice 2026-10-08 1403.partial`. Wren renames it
+when the export is complete. If you ever find a `.partial` one, that export didn't finish: Wren
+was killed, wiped, or the phone went off. If the storage provider refuses the rename, the export
+keeps the partial name even though it is complete.
 
 ## Exporting every chat at once
 
@@ -120,7 +133,9 @@ Photos and stickers show inline, voice messages, audio and video get a player, a
 are links into `media/`. Link previews only become clickable when the address starts with
 `http://` or `https://`.
 
-**Plain text** puts each message in a block like this:
+**Plain text** puts each message in a block like this. Control characters other than tab and
+newline, and the invisible marks that flip text direction, are written as U+FFFD (�), so a
+message can't move the cursor in a terminal or make a name read backwards:
 
 ```
 [2026-10-08 14:03] Alice: See you at six
@@ -133,7 +148,9 @@ Times in the HTML and text files use the phone's time zone at the moment of expo
 
 **JSON** is for scripts. It is one object with a `chat` section and a `messages` array. Every
 time is given twice, as epoch milliseconds and as an ISO-8601 string in UTC. Each attachment has
-a `path` into `media/`, or `null` when the file is not in the export.
+a `path` into `media/`, or `null` when the file is not in the export. Message text is exact;
+names (the chat, senders, quote and reaction authors, file names) have the same control and
+direction characters removed, as they do in the HTML.
 
 ## What is in it
 
@@ -159,10 +176,14 @@ timer.
   chat.
 - Exporting does not tell anyone in the chat.
 - If Android kills Wren in the middle of an export, a plain export starts over in a new folder
-  the next time Wren runs, and the half-written one from before stays where it is. An encrypted
-  export cannot start over, because the passphrase is gone; you get a notification instead. A
-  half-written `.wrenx` from the killed run stays behind, but it has no closing chunk, so the
-  tool refuses it ("The file ends early"), and it is still encrypted.
+  the next time Wren runs, and the half-written one from before stays where it is, under its
+  `.partial` name. An encrypted export cannot start over, because the passphrase is gone; you
+  get a notification instead. A half-written `.wrenx.partial` from the killed run stays behind,
+  but it has no closing chunk, so the tool refuses it ("The file ends early"), and it is still
+  encrypted.
+- A wipe (duress passphrase, failed-attempt limit, panic trigger or inactivity) does not reach
+  the folder you exported to. Finished exports stay, and so does a `.partial` one that was being
+  written when Wren was wiped. Delete them yourself.
 - In an encrypted export of all chats, a chat that fails partway is counted as failed like in a
   plain export, but media it had already added stays in the archive (without that chat's file),
   because nothing can be taken back out of a stream. If writing the archive itself fails, the

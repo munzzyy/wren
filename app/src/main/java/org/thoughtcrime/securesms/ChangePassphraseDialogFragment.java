@@ -356,21 +356,32 @@ public class ChangePassphraseDialogFragment extends DialogFragment {
 
       MasterSecret masterSecret = null;
 
-      if (mode != MODE_DISABLE && DuressManager.isDuressPassphrase(context, newPassphrase)) {
-        matchesDuress = true;
-      } else if (!MasterSecretUtil.isPassphraseInitialized(context)) {
-        masterSecret = MasterSecretUtil.generateMasterSecret(context, newPassphrase);
-      } else {
+      if (mode == MODE_ENABLE) {
+        if (DuressManager.isDuressPassphrase(context, newPassphrase)) {
+          matchesDuress = true;
+        } else if (!MasterSecretUtil.isPassphraseInitialized(context)) {
+          masterSecret = MasterSecretUtil.generateMasterSecret(context, newPassphrase);
+        } else {
+          try {
+            masterSecret = MasterSecretUtil.changeMasterSecretPassphrase(context, oldPassphrase, newPassphrase);
+          } catch (InvalidPassphraseException | UnrecoverableKeyException e) {
+            Log.d(TAG, e);
+          }
+        }
+      } else if (DuressManager.onAttemptStarting(context)) {
         try {
-          masterSecret = MasterSecretUtil.changeMasterSecretPassphrase(context, oldPassphrase, newPassphrase);
-          if (mode != MODE_ENABLE) {
-            DuressManager.onUnlocked(context);
+          MasterSecret verified = MasterSecretUtil.getMasterSecret(context, oldPassphrase);
+          DuressManager.onUnlocked(context);
+          if (mode == MODE_CHANGE && DuressManager.isDuressPassphrase(context, newPassphrase)) {
+            matchesDuress = true;
+            verified.close();
+          } else {
+            MasterSecretUtil.changeMasterSecretPassphrase(context, verified, newPassphrase);
+            masterSecret = verified;
           }
         } catch (InvalidPassphraseException e) {
           Log.d(TAG, e);
-          if (mode != MODE_ENABLE) {
-            DuressManager.onWrongPassphrase(context, oldPassphrase);
-          }
+          DuressManager.onWrongPassphrase(context, oldPassphrase);
         } catch (UnrecoverableKeyException e) {
           Log.d(TAG, e);
         }

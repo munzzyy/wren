@@ -28,9 +28,9 @@ class DeviceCheckViewModel(private val repository: DeviceCheckRepository) : View
     }
   }
 
-  fun toggle(setting: HardenedSetting) {
+  fun harden(setting: HardenedSetting) {
     viewModelScope.launch(Dispatchers.IO) {
-      repository.toggle(setting)
+      repository.harden(setting)
       store.value = load()
     }
   }

@@ -7,22 +7,34 @@
 # whether any Google services code is inside. Exits non-zero if any check
 # fails. An unsigned APK is reported, not failed, unless --require-signed is
 # given. --allow-fcm reports Firebase and Play Services code instead of
-# failing on it, for a build made with -PwrenFcm=true.
-# Usage: tools/apk-report.sh [--require-signed] [--allow-fcm] <apk>...
+# failing on it, for a build made with -PwrenFcm=true. --known-4k=a.so,b.so
+# reports those libraries as warnings when they miss the 16 KB alignment,
+# for prebuilt libraries that can't be rebuilt yet; every other library and
+# every other check still fails.
+# Usage: tools/apk-report.sh [--require-signed] [--allow-fcm] [--known-4k=lib.so,...] <apk>...
 set -uo pipefail
 
 require_signed=0
 allow_fcm=0
+known_4k=,
 while [[ ${1:-} == --* ]]; do
   case $1 in
     --require-signed) require_signed=1 ;;
     --allow-fcm) allow_fcm=1 ;;
+    --known-4k=*)
+      list=${1#--known-4k=}
+      if [[ ! $list =~ ^[A-Za-z0-9._+-]+\.so(,[A-Za-z0-9._+-]+\.so)*$ ]]; then
+        echo "--known-4k wants a comma-separated list of .so names, got: $list" >&2
+        exit 2
+      fi
+      known_4k=,$list,
+      ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
 done
 if [[ $# -eq 0 ]]; then
-  echo "usage: tools/apk-report.sh [--require-signed] [--allow-fcm] <apk>..." >&2
+  echo "usage: tools/apk-report.sh [--require-signed] [--allow-fcm] [--known-4k=lib.so,...] <apk>..." >&2
   exit 2
 fi
 
@@ -65,7 +77,7 @@ human() {
 # LOAD segments of 64-bit libraries need 16 KB alignment (0x4000 or more).
 # 32-bit ARM runs in 4 KB page mode, so it is reported but not enforced.
 elf_check() {
-  local dir=$1 bad=0 checked=0 skipped=0 so abi class aligns a
+  local dir=$1 bad=0 warned=0 checked=0 skipped=0 so abi class aligns a name
   while IFS= read -r so; do
     abi=$(basename "$(dirname "$so")")
     class=$("$readelf" -h "$so" 2> /dev/null | sed -n 's/^ *Class: *//p')
@@ -80,16 +92,22 @@ elf_check() {
       bad=$((bad + 1))
       continue
     fi
+    name=$(basename "$so")
     for a in $aligns; do
       if (($a < 0x4000)); then
-        fail "$abi/$(basename "$so"): LOAD segment aligned to $a, needs 0x4000"
-        bad=$((bad + 1))
+        if [[ $known_4k == *,"$name",* ]]; then
+          echo "  warn  $abi/$name: LOAD segment aligned to $a, needs 0x4000 (known, --known-4k)"
+          warned=$((warned + 1))
+        else
+          fail "$abi/$name: LOAD segment aligned to $a, needs 0x4000"
+          bad=$((bad + 1))
+        fi
         break
       fi
     done
   done < <(find "$dir" -name '*.so' -path '*/lib/*' | sort)
   if [[ $bad -eq 0 ]]; then
-    ok "ELF LOAD alignment >= 16 KB on $checked 64-bit libraries ($skipped 32-bit skipped)"
+    ok "ELF LOAD alignment >= 16 KB on $((checked - warned)) of $checked 64-bit libraries, $warned known exceptions ($skipped 32-bit skipped)"
   fi
 }
 

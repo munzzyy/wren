@@ -14,6 +14,7 @@ data class PrivacySettingsState(
   val failedAttemptLimit: Int,
   val panicAction: PanicAction,
   val panicTriggerPackage: String?,
+  val panicTriggerCertificate: String?,
   val inactivityWipeDays: Int,
   val usbLock: Boolean,
   val biometricScreenLock: Boolean,

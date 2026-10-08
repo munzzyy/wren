@@ -75,6 +75,33 @@ abstract class ChatExportWriter(protected val out: Appendable) {
       return "${ExportFileNames.MEDIA_FOLDER}/${attachment.fileName}"
     }
 
+    /**
+     * C0 controls other than tab and newline, DEL, C1, and the bidi marks, embeddings, overrides
+     * and isolates. In a name they can reorder or hide what is shown around them.
+     */
+    internal fun isUnsafeControl(c: Char): Boolean {
+      val code = c.code
+      return (code < 0x20 && c != '\t' && c != '\n') ||
+        code in 0x7F..0x9F ||
+        code == 0x061C ||
+        code == 0x200E ||
+        code == 0x200F ||
+        code in 0x202A..0x202E ||
+        code in 0x2066..0x2069
+    }
+
+    internal fun replaceControls(value: String): String {
+      if (value.none(::isUnsafeControl)) return value
+      return buildString(value.length) {
+        for (c in value) append(if (isUnsafeControl(c)) '\uFFFD' else c)
+      }
+    }
+
+    internal fun stripControls(value: String): String {
+      if (value.none(::isUnsafeControl)) return value
+      return value.filterNot(::isUnsafeControl)
+    }
+
     private const val MINUTE = 60L
     private const val HOUR = 60 * MINUTE
     private const val DAY = 24 * HOUR
@@ -94,10 +121,10 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
     out.append("<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\">\n")
     out.append("<meta name=\"referrer\" content=\"no-referrer\">\n")
     out.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
-    out.append("<title>").append(escape(chat.name)).append("</title>\n")
+    out.append("<title>").append(name(chat.name)).append("</title>\n")
     out.append("<style>\n").append(CSS).append("</style>\n")
     out.append("</head>\n<body>\n")
-    out.append("<header>\n<h1>").append(escape(chat.name)).append("</h1>\n")
+    out.append("<header>\n<h1>").append(name(chat.name)).append("</h1>\n")
     out.append("<p class=\"meta\">Exported ").append(escape(localTime(chat.exportedAtMillis, zone)))
       .append(" &middot; ").append(chat.messageCount.toString()).append(if (chat.messageCount == 1) " message" else " messages")
     if (!chat.includesMedia) {
@@ -118,7 +145,7 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
 
     out.append("<div class=\"msg ").append(if (message.outgoing) "out" else "in").append("\" id=\"m").append(message.id.toString()).append("\">\n")
     out.append("<div class=\"bubble\">\n")
-    out.append("<div class=\"sender\">").append(escape(message.sender)).append("</div>\n")
+    out.append("<div class=\"sender\">").append(name(message.sender)).append("</div>\n")
 
     when {
       message.remoteDeleted -> out.append("<div class=\"placeholder\">This message was deleted.</div>\n")
@@ -129,7 +156,7 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
     if (message.reactions.isNotEmpty()) {
       out.append("<div class=\"reactions\">")
       for (reaction in message.reactions) {
-        out.append("<span title=\"").append(escape(reaction.author)).append("\">").append(escape(reaction.emoji)).append("</span>")
+        out.append("<span title=\"").append(name(reaction.author)).append("\">").append(escape(reaction.emoji)).append("</span>")
       }
       out.append("</div>\n")
     }
@@ -143,7 +170,7 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
 
   private fun writeContent(message: ExportMessage) {
     message.quote?.let { quote ->
-      out.append("<blockquote class=\"quote\"><div class=\"sender\">").append(escape(quote.author)).append("</div>")
+      out.append("<blockquote class=\"quote\"><div class=\"sender\">").append(name(quote.author)).append("</div>")
         .append("<div>").append(escape(quote.text)).append("</div></blockquote>\n")
     }
 
@@ -168,7 +195,7 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
   }
 
   private fun writeAttachment(attachment: ExportAttachment) {
-    val label = escape("${attachment.fileName} (${attachment.contentType}, ${sizeLabel(attachment.sizeBytes)})")
+    val label = escape("${stripControls(attachment.fileName)} (${stripControls(attachment.contentType)}, ${sizeLabel(attachment.sizeBytes)})")
 
     if (attachment.missing || !includesMedia) {
       val reason = if (includesMedia) "not downloaded" else "not included"
@@ -182,7 +209,7 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
     when {
       type.startsWith("image/") -> {
         out.append("<a href=\"").append(src).append("\"><img class=\"").append(if (attachment.sticker) "sticker" else "image")
-          .append("\" src=\"").append(src).append("\" alt=\"").append(escape(attachment.fileName)).append("\" loading=\"lazy\"></a>")
+          .append("\" src=\"").append(src).append("\" alt=\"").append(name(attachment.fileName)).append("\" loading=\"lazy\"></a>")
       }
       type.startsWith("audio/") -> {
         out.append("<audio controls preload=\"none\" src=\"").append(src).append("\"></audio>")
@@ -200,6 +227,8 @@ class HtmlChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
   override fun writeFooter() {
     out.append("</main>\n</body>\n</html>\n")
   }
+
+  private fun name(value: String): String = escape(stripControls(value))
 
   companion object {
     @JvmStatic
@@ -298,9 +327,9 @@ class TextChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
       for (attachment in message.attachments) {
         out.append("  Attachment: ")
         if (attachment.missing || !includesMedia) {
-          out.append(attachment.fileName).append(" (").append(if (includesMedia) "not downloaded" else "not included").append(")")
+          out.append(oneLine(attachment.fileName)).append(" (").append(if (includesMedia) "not downloaded" else "not included").append(")")
         } else {
-          out.append(mediaPath(attachment))
+          out.append(oneLine(mediaPath(attachment)))
         }
         out.append(" [").append(oneLine(attachment.contentType)).append(", ").append(sizeLabel(attachment.sizeBytes)).append("]\n")
       }
@@ -336,12 +365,12 @@ class TextChatExportWriter(out: Appendable, private val zone: ZoneId) : ChatExpo
     val lines = text.replace("\r\n", "\n").replace('\r', '\n').split('\n')
     lines.forEachIndexed { index, line ->
       if (index > 0) out.append('\n').append(prefix)
-      out.append(line)
+      out.append(replaceControls(line))
     }
   }
 
   private fun oneLine(value: String): String {
-    return value.replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ')
+    return replaceControls(value.replace("\r\n", " ").replace('\r', ' ').replace('\n', ' '))
   }
 }
 
@@ -353,7 +382,7 @@ class JsonChatExportWriter(out: Appendable) : ChatExportWriter(out) {
   override fun writeHeader(chat: ExportChat) {
     includesMedia = chat.includesMedia
     out.append("{\n\"format\":\"wren-chat-export\",\n\"version\":1,\n\"chat\":{")
-    field("name", chat.name, first = true)
+    field("name", stripControls(chat.name), first = true)
     field("isGroup", chat.isGroup)
     field("messageCount", chat.messageCount.toLong())
     field("includesMedia", chat.includesMedia)
@@ -369,7 +398,7 @@ class JsonChatExportWriter(out: Appendable) : ChatExportWriter(out) {
     field("id", message.id, first = true)
     timeFields("sentAt", message.sentAtMillis)
     timeFields("receivedAt", message.receivedAtMillis)
-    field("sender", message.sender)
+    field("sender", stripControls(message.sender))
     field("outgoing", message.outgoing)
     field("system", message.system)
     field("remoteDeleted", message.remoteDeleted)
@@ -383,18 +412,18 @@ class JsonChatExportWriter(out: Appendable) : ChatExportWriter(out) {
       out.append("null")
     } else {
       out.append('{')
-      field("author", quote.author, first = true)
+      field("author", stripControls(quote.author), first = true)
       field("text", quote.text)
       out.append('}')
     }
 
     array("reactions", message.reactions) {
       field("emoji", it.emoji, first = true)
-      field("author", it.author)
+      field("author", stripControls(it.author))
     }
 
     array("attachments", message.attachments) {
-      field("fileName", it.fileName, first = true)
+      field("fileName", stripControls(it.fileName), first = true)
       field("path", if (it.missing || !includesMedia) null else mediaPath(it))
       field("contentType", it.contentType)
       field("sizeBytes", it.sizeBytes)

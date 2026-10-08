@@ -13,16 +13,6 @@ import java.time.ZoneOffset
 
 class ExportFileNamesTest {
 
-  private val mimeTypes = mapOf(
-    "image/jpeg" to "jpg",
-    "image/png" to "png",
-    "audio/aac" to "aac",
-    "application/x-weird" to "../etc",
-    "application/x-long" to "verylongextension"
-  )
-
-  private fun extensionFor(mimeType: String): String? = mimeTypes[mimeType]
-
   @Test
   fun `plain names pass through`() {
     assertEquals("Alice", ExportFileNames.sanitizeChatName("Alice"))
@@ -88,35 +78,83 @@ class ExportFileNamesTest {
 
   @Test
   fun `media name uses a safe extension from the original file name`() {
-    assertEquals("12-1.jpeg", ExportFileNames.mediaFileName(12, 1, "Holiday.JPEG", "image/png", ::extensionFor))
-    assertEquals("12-2.pdf", ExportFileNames.mediaFileName(12, 2, "dir/report.final.pdf", null, ::extensionFor))
+    assertEquals("12-1.jpeg", ExportFileNames.mediaFileName(12, 1, "Holiday.JPEG", "image/jpeg"))
+    assertEquals("12-2.pdf", ExportFileNames.mediaFileName(12, 2, "dir/report.final.pdf", "application/pdf"))
+    assertEquals("12-3.opus", ExportFileNames.mediaFileName(12, 3, "voice.opus", "audio/ogg"))
+  }
+
+  @Test
+  fun `an original extension of another type is replaced`() {
+    assertEquals("12-1.png", ExportFileNames.mediaFileName(12, 1, "Holiday.JPEG", "image/png"))
+    assertEquals("12-1.jpg", ExportFileNames.mediaFileName(12, 1, "cat.html", "image/jpeg"))
+    assertEquals("12-1.jpg", ExportFileNames.mediaFileName(12, 1, "cat.svg", "image/jpeg"))
+    assertEquals("12-1.txt", ExportFileNames.mediaFileName(12, 1, "notes.js", "text/plain"))
+  }
+
+  @Test
+  fun `active types become bin whatever the name says`() {
+    val active = listOf(
+      "text/html" to "page.html",
+      "application/xhtml+xml" to "page.xhtml",
+      "image/svg+xml" to "cat.svg",
+      "image/svg+xml" to "cat.jpg",
+      "text/xml" to "feed.xml",
+      "application/xml" to "feed.xml",
+      "multipart/related" to "saved.mht",
+      "message/rfc822" to "saved.mht",
+      "text/javascript" to "app.js",
+      "application/javascript" to "app.js",
+      "application/octet-stream" to "photo.jpg",
+      "application/x-msdownload" to "setup.exe"
+    )
+    for ((type, name) in active) {
+      assertEquals("$type $name", "7-1.bin", ExportFileNames.mediaFileName(7, 1, name, type))
+    }
+  }
+
+  @Test
+  fun `no allowed extension is one a browser runs`() {
+    val forbidden = setOf("html", "htm", "xhtml", "shtml", "svg", "svgz", "xml", "xsl", "mht", "mhtml", "js", "mjs", "hta", "swf")
+    for ((type, extensions) in ExportFileNames.PASSIVE_TYPES) {
+      assertTrue(type, extensions.isNotEmpty())
+      for (extension in extensions) {
+        assertFalse("$type $extension", extension in forbidden)
+        assertTrue("$type $extension", Regex("^[a-z0-9]{1,8}$").matches(extension))
+      }
+    }
+  }
+
+  @Test
+  fun `partial names are hidden and marked`() {
+    assertEquals(".Wren export 2026-10-08 0903.partial", ExportFileNames.partialName("Wren export 2026-10-08 0903"))
+    assertEquals(".Wren chat 2026-10-08 0903.wrenx.partial", ExportFileNames.partialName("Wren chat 2026-10-08 0903.wrenx"))
   }
 
   @Test
   fun `media name falls back to the content type when the original extension is unsafe`() {
-    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, "photo", "image/jpeg", ::extensionFor))
-    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, null, "image/jpeg", ::extensionFor))
-    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, ".jpeg", "image/jpeg", ::extensionFor))
-    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, "x.j/pg", "image/jpeg", ::extensionFor))
-    assertEquals("5-1.png", ExportFileNames.mediaFileName(5, 1, "evil.p‮gn", "image/png", ::extensionFor))
-    assertEquals("5-1.png", ExportFileNames.mediaFileName(5, 1, "trailing.", "IMAGE/PNG; charset=binary", ::extensionFor))
-    assertEquals("5-1.aac", ExportFileNames.mediaFileName(5, 1, "x.waytoolongext", "audio/aac", ::extensionFor))
+    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, "photo", "image/jpeg"))
+    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, null, "image/jpeg"))
+    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, ".jpeg", "image/jpeg"))
+    assertEquals("5-1.jpg", ExportFileNames.mediaFileName(5, 1, "x.j/pg", "image/jpeg"))
+    assertEquals("5-1.png", ExportFileNames.mediaFileName(5, 1, "evil.p‮gn", "image/png"))
+    assertEquals("5-1.png", ExportFileNames.mediaFileName(5, 1, "trailing.", "IMAGE/PNG; charset=binary"))
+    assertEquals("5-1.aac", ExportFileNames.mediaFileName(5, 1, "x.waytoolongext", "audio/aac"))
   }
 
   @Test
   fun `media name falls back to bin`() {
-    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, null, ::extensionFor))
-    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, "application/unknown", ::extensionFor))
-    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, "application/x-weird", ::extensionFor))
-    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, "application/x-long", ::extensionFor))
-    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, "", "", ::extensionFor))
+    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, null))
+    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, "application/unknown"))
+    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, "report.pdf", null))
+    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, null, "application/x-long"))
+    assertEquals("5-1.bin", ExportFileNames.mediaFileName(5, 1, "", ""))
   }
 
   @Test
   fun `media names never contain path separators`() {
     val names = listOf("../../x.sh", "a/b\\c.d", "..", "x.%2e%2e")
     for (name in names) {
-      val result = ExportFileNames.mediaFileName(1, 1, name, null, ::extensionFor)
+      val result = ExportFileNames.mediaFileName(1, 1, name, null)
       assertFalse(result, result.contains('/'))
       assertFalse(result, result.contains('\\'))
       assertTrue(result, Regex("^1-1\\.[a-z0-9]{1,8}$").matches(result))

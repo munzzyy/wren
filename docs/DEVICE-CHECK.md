@@ -37,12 +37,16 @@ security fixes for Android 9 and older in early 2022. Wren still installs on
 Android 8.1 and 9 because some people have nothing newer, but it can't make up
 for a system that no longer gets patched.
 
-Tap a row to fix it. Screen security, incognito keyboard, link previews, read
-receipts, typing indicators and block unknown flip in place. The passphrase,
-duress, Registration Lock and notification rows open the screen
-where you change them, and the phone rows open Android's own settings. On a
-linked device, read receipts and typing indicators belong to your primary
-device, so those rows don't respond to taps.
+Tap a row to fix it. A tap only ever makes things stricter: screen security,
+incognito keyboard, link previews, read receipts, typing indicators and block
+unknown switch to the hardened setting in place when they aren't hardened yet.
+Tapping one that is already hardened doesn't turn it off; it opens the
+settings screen where that option lives (Privacy, Chats, or the network
+settings for Orbot), so turning something off is always a deliberate change
+there. The passphrase, duress, Registration Lock and notification rows open
+the screen where you change them, and the phone rows open Android's own
+settings. On a linked device, read receipts and typing indicators belong to
+your primary device, so those rows don't respond to taps.
 
 ### Apply hardened defaults
 

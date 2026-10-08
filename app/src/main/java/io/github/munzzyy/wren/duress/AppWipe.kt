@@ -5,14 +5,11 @@ package io.github.munzzyy.wren.duress
 import android.content.Context
 import android.os.Process
 import org.signal.core.util.ServiceUtil
-import org.signal.core.util.logging.Log
 import java.io.File
 import java.security.KeyStore
 import kotlin.system.exitProcess
 
 object AppWipe {
-
-  private val TAG = Log.tag(AppWipe::class.java)
 
   private const val CLEAR_GRACE_MILLIS = 15_000L
 
@@ -23,8 +20,6 @@ object AppWipe {
   @JvmStatic
   fun wipeNow(context: Context) {
     val app = context.applicationContext ?: context
-
-    runCatching { Log.w(TAG, "Wiping all local data") }
 
     runCatching { deleteKeyStoreEntries() }
 

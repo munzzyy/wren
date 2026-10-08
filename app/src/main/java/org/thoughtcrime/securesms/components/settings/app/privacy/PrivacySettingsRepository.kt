@@ -34,6 +34,9 @@ class PrivacySettingsRepository {
   val panicTriggerPackage: String?
     get() = duressStore.panicTriggerPackage
 
+  val panicTriggerCertificate: String?
+    get() = duressStore.panicTriggerCertificate
+
   val inactivityWipeDays: Int
     get() = duressStore.inactivityWipeDays
 

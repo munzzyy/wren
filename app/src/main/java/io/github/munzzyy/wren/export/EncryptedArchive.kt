@@ -30,6 +30,7 @@ internal class ArchiveWriteException(cause: IOException) : IOException(cause)
 internal class EncryptedArchive private constructor(
   private val spoolDirectory: File,
   val file: DocumentFile,
+  private val finalName: String,
   private val wrenx: WrenxOutputStream,
   modifiedSeconds: Long
 ) : Closeable {
@@ -39,16 +40,20 @@ internal class EncryptedArchive private constructor(
 
     const val MIME_TYPE = "application/octet-stream"
 
-    /** Creates the file and derives the key, which takes as long as scrypt does. */
+    /**
+     * Creates the file under its partial name and derives the key, which takes as long as scrypt
+     * does. [finish] gives it its real name.
+     */
     @WorkerThread
     fun create(context: Context, parent: DocumentFile, baseName: String, passphrase: CharArray, modifiedMillis: Long): EncryptedArchive {
-      val file = parent.createFile(MIME_TYPE, "$baseName.${Wrenx.FILE_EXTENSION}") ?: throw IOException("Could not create the encrypted export file")
+      val finalName = "$baseName.${Wrenx.FILE_EXTENSION}"
+      val file = parent.createFile(MIME_TYPE, ExportFileNames.partialName(finalName)) ?: throw IOException("Could not create the encrypted export file")
 
       try {
         val stream = context.contentResolver.openOutputStream(file.uri) ?: throw IOException("Could not open the encrypted export file")
         try {
           val wrenx = WrenxOutputStream(BufferedOutputStream(stream, 64 * 1024), passphrase)
-          return EncryptedArchive(context.cacheDir, file, wrenx, modifiedMillis / 1000)
+          return EncryptedArchive(context.cacheDir, file, finalName, wrenx, modifiedMillis / 1000)
         } catch (e: Throwable) {
           stream.close()
           throw e
@@ -76,6 +81,7 @@ internal class EncryptedArchive private constructor(
       tar.finish()
       wrenx.finish()
     }
+    ExportFolders.finish(file, finalName)
   }
 
   override fun close() {
@@ -120,7 +126,7 @@ internal class EncryptedArchive private constructor(
       }
     }
 
-    override fun writeMedia(name: String, contentType: String, open: () -> InputStream): String? {
+    override fun writeMedia(name: String, open: () -> InputStream): String? {
       val size = try {
         open().use { count(it) }
       } catch (e: IOException) {

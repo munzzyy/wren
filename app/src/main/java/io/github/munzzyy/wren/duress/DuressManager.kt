@@ -10,6 +10,7 @@ import org.signal.core.util.crypto.KeyStoreHelper
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.crypto.MasterSecretUtil
 import org.thoughtcrime.securesms.crypto.PassphraseBasedKdf
+import org.thoughtcrime.securesms.util.TextSecurePreferences
 import java.util.UUID
 
 object DuressManager {
@@ -18,44 +19,71 @@ object DuressManager {
 
   private const val KEYSTORE_ALIAS_PREFIX = "WrenDuress-"
 
+  /**
+   * Runs before every passphrase check. Counts the attempt first, so killing the app during the
+   * KDF does not take the guess back. False means the attempt must not go ahead. Wipes and never
+   * returns if an earlier count already reached the limit.
+   */
+  @JvmStatic
+  @WorkerThread
+  fun onAttemptStarting(context: Context): Boolean {
+    return unlockAttempts(context, DuressStore(context)).onStarting()
+  }
+
   /** Runs after the real passphrase was rejected. Wipes and never returns if the policy says so. */
   @JvmStatic
   @WorkerThread
   fun onWrongPassphrase(context: Context, passphrase: CharArray) {
     val store = DuressStore(context)
+    val check = DuressCheck.plan(store.duressEnabled, TextSecurePreferences.isPassphraseLockEnabled(context))
 
-    if (isDuressPassphrase(store, passphrase)) {
-      Log.w(TAG, "Duress passphrase entered")
+    if (check.matches(real = { isDuressPassphrase(store, passphrase) }, decoy = { runDecoy(context, store, passphrase) })) {
       AppWipe.wipeNow(context)
       return
     }
 
-    try {
-      val outcome = FailedAttemptPolicy.onFailedAttempt(store.failedAttemptCount, store.failedAttemptLimit)
-      store.failedAttemptCount = outcome.count
-      if (outcome.wipe) {
-        Log.w(TAG, "Failed unlock limit reached")
-        AppWipe.wipeNow(context)
-      }
-    } catch (e: RuntimeException) {
-      Log.w(TAG, "Could not record failed unlock", e)
+    unlockAttempts(context, store).onRejected()
+  }
+
+  /** Same KDF parameters and KeyStore HMAC as the lock itself, against a verifier nothing matches. */
+  private fun runDecoy(context: Context, store: DuressStore, passphrase: CharArray) {
+    runCatching {
+      val params = MasterSecretUtil.getKdfParameters(context).takeIf { it.isNotEmpty() } ?: return
+      val (salt, verifier) = store.decoy()
+      DuressVerifier(keyStoreKdf(params, MasterSecretUtil.getKeyStoreAlias(context))).matches(passphrase, salt, verifier)
     }
   }
 
   @JvmStatic
   @WorkerThread
   fun onUnlocked(context: Context) {
+    val store = DuressStore(context)
+    if (!unlockAttempts(context, store).onSucceeded()) {
+      Log.w(TAG, "Could not record unlock")
+    }
     try {
-      val store = DuressStore(context)
-      if (store.failedAttemptCount != 0) {
-        store.failedAttemptCount = FailedAttemptPolicy.onSuccessfulAttempt()
-      }
       if (store.inactivityWipeDays != InactivityWipePolicy.OFF) {
         store.lastUnlockAt = System.currentTimeMillis()
       }
     } catch (e: RuntimeException) {
       Log.w(TAG, "Could not record unlock", e)
     }
+  }
+
+  private fun unlockAttempts(context: Context, store: DuressStore): UnlockAttempts {
+    val counter = object : UnlockAttempts.Counter {
+      override val limit: Int
+        get() = store.failedAttemptLimit
+
+      override var count: Int
+        get() = store.failedAttemptCount
+        set(value) {
+          store.failedAttemptCount = value
+        }
+
+      override fun <T> locked(block: () -> T): T = store.withGuardStateLocked(block)
+    }
+    return UnlockAttempts(counter) { AppWipe.wipeNow(context) }
   }
 
   @WorkerThread
@@ -111,15 +139,16 @@ object DuressManager {
 
       DuressVerifier(keyStoreKdf(params, alias)).matches(passphrase, salt, verifier)
     } catch (e: Throwable) {
-      Log.w(TAG, "Duress check failed", e)
       false
     }
   }
 
-  private fun keyStoreKdf(serializedParams: String, keyStoreAlias: String): (CharArray, ByteArray) -> ByteArray {
+  private fun keyStoreKdf(serializedParams: String, keyStoreAlias: String?): (CharArray, ByteArray) -> ByteArray {
     val kdf = PassphraseBasedKdf()
     kdf.setParameters(serializedParams)
-    kdf.setHmacKey(requireNotNull(KeyStoreHelper.getKeyStoreEntryHmac(keyStoreAlias)))
+    if (keyStoreAlias != null) {
+      kdf.setHmacKey(requireNotNull(KeyStoreHelper.getKeyStoreEntryHmac(keyStoreAlias)))
+    }
 
     return { passphrase, salt ->
       val key = kdf.deriveKey(passphrase, salt)

@@ -50,8 +50,8 @@ class DeviceCheckRepository(context: Context) {
   }
 
   @WorkerThread
-  fun toggle(setting: HardenedSetting) {
-    write(setting, hardened = !setting.isHardened(snapshot()))
+  fun harden(setting: HardenedSetting) {
+    write(setting, hardened = true)
     syncIfNeeded(listOf(setting))
   }
 

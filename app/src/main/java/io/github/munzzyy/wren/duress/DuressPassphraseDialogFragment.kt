@@ -170,11 +170,15 @@ class DuressPassphraseDialogFragment : DialogFragment() {
       return
     }
 
+    if (result == SaveResult.REAL_PASSPHRASE) {
+      Toast.makeText(requireContext(), R.string.DuressPassphraseDialogFragment__this_is_your_real_passphrase, Toast.LENGTH_LONG).show()
+      dismissAllowingStateLoss()
+      return
+    }
+
     showProgress(false)
 
-    if (result == SaveResult.REAL_PASSPHRASE) {
-      passphraseLayout?.error = getString(R.string.DuressPassphraseDialogFragment__this_is_your_real_passphrase)
-    } else {
+    if (result == SaveResult.FAILED) {
       Toast.makeText(requireContext(), R.string.DuressPassphraseDialogFragment__could_not_save, Toast.LENGTH_LONG).show()
     }
   }
@@ -184,7 +188,7 @@ class DuressPassphraseDialogFragment : DialogFragment() {
       MasterSecretUtil.getMasterSecret(context, passphrase).close()
       return SaveResult.REAL_PASSPHRASE
     } catch (e: InvalidPassphraseException) {
-      Log.d(TAG, "Duress candidate differs from the real passphrase")
+      Unit
     } catch (e: UnrecoverableKeyException) {
       Log.w(TAG, "Could not check the real passphrase", e)
       return SaveResult.FAILED
@@ -194,7 +198,7 @@ class DuressPassphraseDialogFragment : DialogFragment() {
       DuressManager.setDuressPassphrase(context, passphrase)
       SaveResult.SAVED
     } catch (e: Throwable) {
-      Log.w(TAG, "Could not save duress passphrase", e)
+      Log.w(TAG, "Could not save the setting", e)
       SaveResult.FAILED
     }
   }
@@ -207,7 +211,7 @@ class DuressPassphraseDialogFragment : DialogFragment() {
       try {
         DuressManager.clearDuressPassphrase(context)
       } catch (e: RuntimeException) {
-        Log.w(TAG, "Could not clear duress passphrase", e)
+        Log.w(TAG, "Could not clear the setting", e)
       }
       ThreadUtil.runOnMain { resultListener?.onDuressPassphraseChanged(false) }
     }

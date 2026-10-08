@@ -67,9 +67,9 @@ public class MasterSecretUtil {
   private static final String ASYMMETRIC_LOCAL_PUBLIC_DJB   = "asymmetric_master_secret_curve25519_public";
   private static final String ASYMMETRIC_LOCAL_PRIVATE_DJB  = "asymmetric_master_secret_curve25519_private";
 
-  private static void changeMasterSecretPassphrase(Context context,
-                                                   MasterSecret masterSecret,
-                                                   char[] newPassphrase)
+  public static void changeMasterSecretPassphrase(Context context,
+                                                  MasterSecret masterSecret,
+                                                  char[] newPassphrase)
   {
     SharedPreferences.Editor prefs = getSharedPreferences(context).edit();
 
@@ -276,6 +276,10 @@ public class MasterSecretUtil {
 
   public static String getKdfParameters(Context context) {
     return retrieve(context, "kdf_parameters", "");
+  }
+
+  public static @Nullable String getKeyStoreAlias(Context context) {
+    return isKeyStoreInitialized(context) ? retrieve(context, "keystore_alias", KEY_ALIAS_DEFAULT) : null;
   }
 
   public static boolean hasStrongBoxKeyStore(Context context) {
