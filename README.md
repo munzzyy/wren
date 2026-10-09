@@ -182,8 +182,15 @@ iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
 - Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
   and let it track releases. Set its APK filter to `^Wren-v.*-arm64-v8a\.apk$`
   so it picks the one file for your phone.
-- An F-Droid repository at `https://munzzyy.dev/wren/fdroid/` is planned;
-  see [docs/FDROID-REPO.md](docs/FDROID-REPO.md).
+- Or add Wren's own F-Droid repository. In the F-Droid client, open this
+  link or scan the QR code on the [repo page](https://munzzyy.dev/wren/fdroid/repo/):
+
+  ```
+  https://munzzyy.dev/wren/fdroid/repo?fingerprint=279DA658DD3DD265B4EA91D6B1C0925C9F19D9472A3D315068B2BADB8937DD6F
+  ```
+
+  The repo serves the same signed APKs as the Releases page and nothing else.
+  [docs/FDROID-REPO.md](docs/FDROID-REPO.md) explains how it is built.
 
 Wren uses the package id `io.github.munzzyy.wren`, so it installs next to
 Signal and Molly without touching them. Android 8.1 or newer.
