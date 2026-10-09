@@ -4,6 +4,8 @@
 [![Test](https://github.com/munzzyy/wren/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/munzzyy/wren/actions/workflows/test.yml)
 [![Reproducible Build](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml/badge.svg)](https://github.com/munzzyy/wren/actions/workflows/reprocheck.yml)
 
+[<img src="https://tern.munzzyy.dev/badge.png" alt="Get it with Tern" height="80">](https://tern.munzzyy.dev/add/?url=https%3A%2F%2Fgithub.com%2Fmunzzyy%2Fwren)
+
 <img src="docs/images/icon.png" alt="Wren icon" width="96" align="right">
 
 Wren is a hardened Signal client for Android. It is a fork of
@@ -179,6 +181,10 @@ iOS, [munzzyy/wren-ios](https://github.com/munzzyy/wren-ios), built from
   (`arm64-v8a` for almost every phone made since 2017, `armeabi-v7a` for old
   32-bit phones, `x86_64` for emulators and some tablets) and a universal file
   that holds all three. Sizes are in [BUILDING.md](BUILDING.md).
+- Or install it with [Tern](https://tern.munzzyy.dev), which follows the
+  Releases page, checks the signer of every file before it installs, and
+  updates Wren when a new tag lands. The badge at the top of this page hands
+  the repository to Tern.
 - Or add the repository to [Obtainium](https://github.com/ImranR98/Obtainium)
   and let it track releases. Set its APK filter to `^Wren-v.*-arm64-v8a\.apk$`
   so it picks the one file for your phone.
