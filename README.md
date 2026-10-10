@@ -117,7 +117,7 @@ but none of it has been through a round of real-phone testing by people other
 than me. Treat it as a beta and keep a backup.
 
 <!-- signal-status -->
-Wren is on Signal 8.20.5. Signal's stable release is 8.29.3 (tagged 2026-09-30). Molly's main branch is on Signal 8.19.2. The [daily sync workflow](https://github.com/munzzyy/wren/actions/workflows/sync-upstream.yml) rewrites this line whenever one of those changes.
+Wren is on Signal 8.20.5. Signal's stable release is 8.30.3 (tagged 2026-10-07). Molly's main branch is on Signal 8.19.2. The [daily sync workflow](https://github.com/munzzyy/wren/actions/workflows/sync-upstream.yml) rewrites this line whenever one of those changes.
 <!-- /signal-status -->
 
 Releases are signed with this certificate. Check an APK with
